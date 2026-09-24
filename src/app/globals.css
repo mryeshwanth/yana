@@ -1,0 +1,86 @@
+@import "tailwindcss";
+@import "maplibre-gl/dist/maplibre-gl.css";
+
+:root {
+  --paper: #f4efe4;
+  --paper-deep: #ebe3d2;
+  --ink: #211c16;
+  --ink-soft: #5c5247;
+  --line: #d8ccb8;
+  --clay: #c45c26;
+  --clay-dark: #9a3f12;
+  --moss: #3f5d48;
+  --moss-soft: #dce6dc;
+  --live: #1f6b4a;
+  --warn: #9a6b12;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-deep: var(--paper-deep);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-line: var(--line);
+  --color-clay: var(--clay);
+  --color-clay-dark: var(--clay-dark);
+  --color-moss: var(--moss);
+  --color-moss-soft: var(--moss-soft);
+  --font-sans: var(--font-outfit);
+  --font-serif: var(--font-fraunces);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-outfit), sans-serif;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.maplibregl-ctrl-attrib {
+  font-size: 10px;
+  background: rgba(244, 239, 228, 0.85) !important;
+}
+
+.map-marker {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 10px rgba(33, 28, 22, 0.25);
+}
+
+.map-marker.origin {
+  background: #211c16;
+}
+
+.map-marker.destination {
+  width: 18px;
+  height: 18px;
+  background: #c45c26;
+}
+
+.map-marker.parking {
+  background: #3f5d48;
+}
+
+.map-marker.parking.selected {
+  width: 20px;
+  height: 20px;
+  background: #c45c26;
+}
