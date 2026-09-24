@@ -1,4 +1,5 @@
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
+import { LotTags } from "@/components/LotTags";
 import { BrandMark } from "@/components/BrandMark";
 import { UseParkingActions } from "@/components/UseParkingActions";
 import { formatDistance, formatMinutes } from "@/lib/format";
@@ -62,12 +63,9 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
       </header>
       <p className="mt-12 text-xs uppercase tracking-[0.18em] text-ink-soft">Parking</p>
       <h1 className="mt-2 text-3xl font-semibold">{lot.name}</h1>
-      <div className="mt-4 flex items-center gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
         <AvailabilityBadge state={lot.availabilityState} />
-        <span className="text-xs text-ink-soft">
-          Source: {lot.source}
-          {lot.curated ? " · Yana catalog" : ""}
-        </span>
+        <LotTags priceText={lot.priceText} verified={lot.curated} />
       </div>
       <dl className="mt-8 space-y-4 rounded-[4px] border border-line bg-white p-5">
         {lot.address && (
@@ -100,6 +98,8 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
         )}
       </dl>
       <UseParkingActions
+        destination={dest}
+        destName={first(query.destName) ?? ""}
         parking={{
           id: lot.id,
           name: lot.name,

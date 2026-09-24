@@ -8,10 +8,23 @@ type GoogleRoute = {
   polyline?: { encodedPolyline?: string };
 };
 
+type RoutingPreference = "TRAFFIC_AWARE" | "TRAFFIC_AWARE_OPTIMAL" | "TRAFFIC_UNAWARE";
+
 export class GoogleRoutingProvider implements RoutingProvider {
   async getRoutes(origin: Coordinates, destination: Coordinates): Promise<RawRoute[]> {
-    const routes = await computeRoutes(origin, destination, "DRIVE", true);
-    return routes.map((route, index) => toRawRoute(route, `google-drive-${index}`));
+    const batches = await Promise.allSettled([
+      computeRoutes(origin, destination, "DRIVE", true, "TRAFFIC_AWARE"),
+      computeRoutes(origin, destination, "DRIVE", true, "TRAFFIC_AWARE_OPTIMAL"),
+      computeRoutes(origin, destination, "DRIVE", true, "TRAFFIC_UNAWARE"),
+    ]);
+    const routes: RawRoute[] = [];
+    batches.forEach((batch, batchIndex) => {
+      if (batch.status !== "fulfilled") return;
+      batch.value.forEach((route, index) => {
+        routes.push(toRawRoute(route, `google-drive-${batchIndex}-${index}`));
+      });
+    });
+    return routes;
   }
 
   async getWalk(origin: Coordinates, destination: Coordinates): Promise<WalkLeg> {
@@ -33,6 +46,7 @@ async function computeRoutes(
   destination: Coordinates,
   travelMode: "DRIVE" | "WALK",
   alternatives: boolean,
+  routingPreference: RoutingPreference = "TRAFFIC_AWARE",
 ): Promise<GoogleRoute[]> {
   const response = await fetch("https://routes.googleapis.com/directions/v2:computeRoutes", {
     method: "POST",
@@ -45,7 +59,7 @@ async function computeRoutes(
       origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
       destination: { location: { latLng: { latitude: destination.lat, longitude: destination.lng } } },
       travelMode,
-      routingPreference: travelMode === "DRIVE" ? "TRAFFIC_AWARE" : undefined,
+      routingPreference: travelMode === "DRIVE" ? routingPreference : undefined,
       computeAlternativeRoutes: alternatives && travelMode === "DRIVE",
       languageCode: "en-IN",
       units: "METRIC",

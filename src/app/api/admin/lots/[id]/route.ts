@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/auth";
+import { clearNearbyCache } from "@/lib/cache";
 import { LOT_KIND_IDS } from "@/lib/lot-kinds";
 import { prisma } from "@/lib/prisma";
 
@@ -35,6 +36,7 @@ export async function PATCH(request: Request, { params }: Params) {
     data.availabilityState = "unknown";
   }
   const lot = await prisma.parkingLot.update({ where: { id }, data });
+  await clearNearbyCache().catch(() => undefined);
   return NextResponse.json({ lot });
 }
 
@@ -44,5 +46,6 @@ export async function DELETE(_request: Request, { params }: Params) {
   }
   const { id } = await params;
   await prisma.parkingLot.delete({ where: { id } });
+  await clearNearbyCache().catch(() => undefined);
   return NextResponse.json({ ok: true });
 }

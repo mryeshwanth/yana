@@ -1,3 +1,4 @@
+import { haversineMeters } from "../geo";
 import { prisma } from "../prisma";
 import type { ParkingCandidate, ParkingProvider } from "../types";
 
@@ -7,12 +8,10 @@ export class CuratedParkingProvider implements ParkingProvider {
       where: { hidden: false },
     });
 
-    const radiusDegrees = radiusMeters / 111_000;
     return lots
       .filter(
         (lot) =>
-          Math.abs(lot.lat - lat) <= radiusDegrees + 0.01 &&
-          Math.abs(lot.lng - lng) <= radiusDegrees + 0.01,
+          haversineMeters({ lat, lng }, { lat: lot.lat, lng: lot.lng }) <= radiusMeters + 80,
       )
       .map((lot) => ({
         id: lot.source === "operator" ? `curated:${lot.id}` : (lot.externalId ?? `curated:${lot.id}`),

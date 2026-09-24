@@ -1,7 +1,7 @@
 import type { Coordinates } from "./types";
 
 const KEY = "yana.recents";
-const MAX = 8;
+const MAX = 30;
 
 export type RecentPlace = {
   name: string;
@@ -28,6 +28,12 @@ export function pushRecent(place: RecentPlace): RecentPlace[] {
   window.localStorage.setItem(KEY, JSON.stringify(next));
   return next;
 }
+
+export function clearRecents() {
+  window.localStorage.removeItem(KEY);
+}
+
+export const OPEN_RECENT_KEY = "yana.openRecent";
 
 function samePlace(a: RecentPlace, b: RecentPlace) {
   return (

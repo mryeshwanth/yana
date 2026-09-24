@@ -16,14 +16,16 @@ export async function searchNearbyParking(
   destination: Coordinates,
   radiusMeters = 1000,
 ): Promise<Parking[]> {
-  const cacheKey = `nearby:v2:${destination.lat.toFixed(3)}:${destination.lng.toFixed(3)}:${radiusMeters}`;
+  const cacheKey = `nearby:v3:${destination.lat.toFixed(3)}:${destination.lng.toFixed(3)}:${radiusMeters}`;
   const cached = await readCache<Parking[]>(cacheKey);
+  const catalog = await curated.searchNearby(destination.lat, destination.lng, radiusMeters + 200);
+
   if (cached?.length) {
-    return cached;
+    const remote = cached.filter((lot) => !lot.curated && !lot.id.startsWith("curated:"));
+    return rankParking(destination, radiusMeters, [...catalog, ...remote]);
   }
 
   const results = await Promise.allSettled([
-    curated.searchNearby(destination.lat, destination.lng, radiusMeters + 200),
     hasGoogleServer()
       ? places.searchNearby(destination.lat, destination.lng, radiusMeters)
       : Promise.resolve([] as ParkingCandidate[]),
@@ -31,13 +33,24 @@ export async function searchNearbyParking(
   ]);
 
   const buckets = results.map((result) => (result.status === "fulfilled" ? result.value : []));
-  const googleLots = buckets[1] ?? [];
+  const googleLots = buckets[0] ?? [];
   if (googleLots.length > 0) {
     await upsertGoogleParking(googleLots).catch(() => undefined);
   }
-  const merged = mergeCandidates(buckets.flat());
+  const parking = rankParking(destination, radiusMeters, [...catalog, ...buckets.flat()]);
 
-  const parking = merged
+  if (parking.length > 0) {
+    await writeCache(cacheKey, parking, CACHE_TTL.nearby);
+  }
+  return parking;
+}
+
+function rankParking(
+  destination: Coordinates,
+  radiusMeters: number,
+  candidates: ParkingCandidate[],
+): Parking[] {
+  return mergeCandidates(candidates)
     .map((candidate) => {
       const distanceMeters = Math.round(
         haversineMeters(destination, { lat: candidate.lat, lng: candidate.lng }),
@@ -55,11 +68,6 @@ export async function searchNearbyParking(
     .filter((item): item is Parking => Boolean(item))
     .sort((a, b) => a.distanceMeters - b.distanceMeters)
     .slice(0, 20);
-
-  if (parking.length > 0) {
-    await writeCache(cacheKey, parking, CACHE_TTL.nearby);
-  }
-  return parking;
 }
 
 export function mergeCandidates(candidates: ParkingCandidate[]): ParkingCandidate[] {

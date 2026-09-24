@@ -7,12 +7,37 @@ export function annotateRoute(route: RawRoute, mix: RoadMix): AnnotatedRoute {
 
 export function compareRoutes(routes: AnnotatedRoute[]): ComparedRoute[] {
   if (routes.length === 0) return [];
-  const fastest = [...routes].sort((a, b) => a.durationSeconds - b.durationSeconds)[0];
-  return [
-    withCopy(fastest, "fastest", fastest),
-    withCopy(pickBest(routes, "broader_roads"), "broader_roads", fastest),
-    withCopy(pickBest(routes, "family_comfort"), "family_comfort", fastest),
-  ];
+  const unique = uniqueAnnotated(routes);
+  const fastest = [...unique].sort((a, b) => a.durationSeconds - b.durationSeconds)[0];
+  const used = new Set<string>();
+  const prefs: RoutePreference[] = ["fastest", "broader_roads", "family_comfort"];
+  const compared: ComparedRoute[] = [];
+  for (const preference of prefs) {
+    const pool = unique.filter((route) => !used.has(route.id));
+    if (pool.length === 0) break;
+    const best =
+      preference === "fastest"
+        ? [...pool].sort((a, b) => a.durationSeconds - b.durationSeconds)[0]
+        : pickBest(pool, preference);
+    used.add(best.id);
+    compared.push(withCopy(best, preference, fastest));
+  }
+  return compared;
+}
+
+function uniqueAnnotated(routes: AnnotatedRoute[]) {
+  const kept: AnnotatedRoute[] = [];
+  for (const route of routes) {
+    const duplicate = kept.some(
+      (item) =>
+        item.id === route.id ||
+        (Math.abs(item.durationSeconds - route.durationSeconds) < 30 &&
+          Math.abs(item.distanceMeters - route.distanceMeters) < 250 &&
+          Math.abs(item.majorShare - route.majorShare) < 0.08),
+    );
+    if (!duplicate) kept.push(route);
+  }
+  return kept;
 }
 
 function pickBest(routes: AnnotatedRoute[], preference: RoutePreference) {

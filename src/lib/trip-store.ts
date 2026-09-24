@@ -1,6 +1,7 @@
 import type { Coordinates, Parking } from "./types";
 
 const KEY = "yana.trip";
+export const RESUME_TRIP_KEY = "yana.resumeTrip";
 
 export type TripState = {
   origin: Coordinates | null;

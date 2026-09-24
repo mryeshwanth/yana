@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { MapView } from "@/components/MapView";
 import { UserShell } from "@/components/UserShell";
-import { formatMinutes } from "@/lib/format";
+import { formatDistance, formatMinutes } from "@/lib/format";
 import { appleMapsDriveUrl, googleMapsDriveUrl } from "@/lib/maps-links";
 import { readPreference } from "@/lib/preferences";
 import { readTrip, subscribeTrip } from "@/lib/trip-store";
@@ -69,13 +69,20 @@ export default function RoadsPage() {
     routes.find((route) => route.preference === (chosenPreference ?? preference)) ??
     routes[0] ??
     null;
+  const destination = trip.destination;
+  const origin = trip.origin;
 
-  if (!trip.destination || !selected) {
+  if (!destination || !selected) {
     return (
       <UserShell current="roads">
         <header className="flex items-center justify-between px-5 pt-6">
           <BrandMark compact />
-          <span className="text-xs uppercase tracking-[0.16em] text-ink-soft">Roads</span>
+          <Link
+            href="/recents"
+            className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
+          >
+            Recent
+          </Link>
         </header>
         <div className="px-5 pt-16">
           <h1 className="text-3xl font-semibold">Pick parking first</h1>
@@ -94,12 +101,17 @@ export default function RoadsPage() {
     <UserShell current="roads">
       <header className="flex items-center justify-between px-5 pt-6">
         <BrandMark compact />
-        <span className="text-xs uppercase tracking-[0.16em] text-ink-soft">Roads</span>
+        <Link
+          href="/recents"
+          className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
+        >
+          Recent
+        </Link>
       </header>
       <section className="mx-5 mt-4 h-52 overflow-hidden rounded-[4px] border border-line">
         <MapView
-          origin={trip.origin}
-          destination={trip.destination}
+          origin={origin}
+          destination={destination}
           parking={[selected as Parking]}
           selectedParkingId={selected.id}
           route={chosen}
@@ -135,7 +147,7 @@ export default function RoadsPage() {
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="font-medium">{route.label}</span>
                     <span className="shrink-0 text-right text-sm text-ink-soft">
-                      {formatMinutes(route.durationSeconds)} drive
+                      {formatMinutes(route.durationSeconds)} · {formatDistance(route.distanceMeters)}
                       {walk ? ` + ${formatMinutes(walk.durationSeconds)} walk` : ""}
                     </span>
                   </span>
@@ -143,11 +155,11 @@ export default function RoadsPage() {
                   <span className="mt-1 block text-sm leading-5 text-ink-soft">{route.explanation}</span>
                 </span>
               </button>
-              {selectedCard && trip.origin && (
+              {selectedCard && origin && (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <a
                     className="rounded-[4px] bg-accent px-3 py-2.5 text-center text-sm font-semibold text-white"
-                    href={googleMapsDriveUrl(trip.origin, { lat: selected.lat, lng: selected.lng })}
+                    href={googleMapsDriveUrl(origin, { lat: selected.lat, lng: selected.lng }, destination)}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -155,7 +167,7 @@ export default function RoadsPage() {
                   </a>
                   <a
                     className="rounded-[4px] border border-line px-3 py-2.5 text-center text-sm font-medium"
-                    href={appleMapsDriveUrl(trip.origin, { lat: selected.lat, lng: selected.lng })}
+                    href={appleMapsDriveUrl(origin, { lat: selected.lat, lng: selected.lng }, destination)}
                     target="_blank"
                     rel="noreferrer"
                   >

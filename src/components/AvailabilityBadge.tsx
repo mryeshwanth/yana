@@ -2,6 +2,8 @@ import { availabilityLabel } from "@/lib/format";
 import type { AvailabilityState } from "@/lib/types";
 
 export function AvailabilityBadge({ state }: { state: AvailabilityState }) {
+  if (state === "unknown") return null;
+
   const styles = {
     live: "bg-moss-soft text-moss",
     estimated: "bg-[#f3e4bf] text-[#7a5610]",

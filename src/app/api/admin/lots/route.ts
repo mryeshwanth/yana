@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/auth";
+import { clearNearbyCache } from "@/lib/cache";
 import { LOT_KIND_IDS } from "@/lib/lot-kinds";
 import { prisma } from "@/lib/prisma";
 
@@ -41,6 +42,7 @@ export async function POST(request: Request) {
     const lot = await prisma.parkingLot.create({
       data: { ...parsed.data, availabilityState },
     });
+    await clearNearbyCache().catch(() => undefined);
     return NextResponse.json({ lot });
   } catch (error) {
     return NextResponse.json(

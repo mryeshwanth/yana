@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ClockCounterClockwise, PlusCircle } from "@phosphor-icons/react";
+import { Funnel, PlusCircle } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
+import { LotTags } from "@/components/LotTags";
 import { BrandMark } from "@/components/BrandMark";
 import { MapView } from "@/components/MapView";
 import { SearchCard } from "@/components/SearchCard";
@@ -11,8 +12,10 @@ import { UserShell } from "@/components/UserShell";
 import { BANGALORE_CENTER } from "@/lib/constants";
 import { formatDistance, formatMinutes } from "@/lib/format";
 import { requestLocation } from "@/lib/location";
-import { pushRecent, readRecents, type RecentPlace } from "@/lib/recents";
-import { readTrip, writeTrip } from "@/lib/trip-store";
+import { activeFilterCount, DEFAULT_FILTERS, readFilters, type ParkingFilters } from "@/lib/filters";
+import { priceTag } from "@/lib/lot-tags";
+import { OPEN_RECENT_KEY, pushRecent } from "@/lib/recents";
+import { readTrip, RESUME_TRIP_KEY, writeTrip } from "@/lib/trip-store";
 import type { Coordinates, Parking, PlaceSuggestion } from "@/lib/types";
 
 export default function ParkingsPage() {
@@ -26,16 +29,18 @@ export default function ParkingsPage() {
   const [locating, setLocating] = useState(false);
   const [loadingParking, setLoadingParking] = useState(false);
   const [error, setError] = useState("");
-  const [radiusMeters, setRadiusMeters] = useState(1000);
-  const [recents, setRecents] = useState<RecentPlace[]>([]);
+  const [filters, setFilters] = useState<ParkingFilters>(DEFAULT_FILTERS);
 
   useEffect(() => {
+    setFilters(readFilters());
     const trip = readTrip();
     if (trip.origin) setOrigin(trip.origin);
+    sessionStorage.removeItem(RESUME_TRIP_KEY);
+    sessionStorage.removeItem(OPEN_RECENT_KEY);
     if (trip.destination && trip.destName) {
-      setRecents(pushRecent({ name: trip.destName, location: trip.destination }));
-    } else {
-      setRecents(readRecents());
+      setDestination(trip.destination);
+      setDestName(trip.destName);
+      setSelectedId(trip.selectedParking?.id ?? null);
     }
     void locate();
   }, []);
@@ -64,7 +69,7 @@ export default function ParkingsPage() {
     let cancelled = false;
     setLoadingParking(true);
     setError("");
-    fetch(`/api/parking/nearby?lat=${destination.lat}&lng=${destination.lng}&radius=${radiusMeters}`)
+    fetch(`/api/parking/nearby?lat=${destination.lat}&lng=${destination.lng}&radius=${filters.radiusMeters}`)
       .then((response) => response.json())
       .then((data: { parking?: Parking[]; error?: string }) => {
         if (cancelled) return;
@@ -91,7 +96,7 @@ export default function ParkingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [destination, radiusMeters]);
+  }, [destination, filters.radiusMeters]);
 
   async function locate() {
     setLocating(true);
@@ -151,7 +156,7 @@ export default function ParkingsPage() {
       destName: place.name,
       selectedParking: null,
     });
-    setRecents(pushRecent({ name: place.name, location: place.location }));
+    pushRecent({ name: place.name, location: place.location });
   }
 
   function selectParking(id: string) {
@@ -160,13 +165,27 @@ export default function ParkingsPage() {
     writeTrip({ selectedParking: selected });
   }
 
-  const selected = parking.find((lot) => lot.id === selectedId) ?? null;
+  const visibleParking = parking.filter((lot) => {
+    if (filters.yanaVerified && !lot.curated) return false;
+    if (filters.prices.length > 0) {
+      const tag = priceTag(lot.priceText);
+      if (!tag || !filters.prices.includes(tag)) return false;
+    }
+    return true;
+  });
+  const selected = visibleParking.find((lot) => lot.id === selectedId) ?? visibleParking[0] ?? null;
+  const filterCount = activeFilterCount(filters);
 
   return (
     <UserShell current="parkings">
       <header className="flex items-center justify-between px-5 pt-6">
         <BrandMark compact />
-        <span className="text-xs uppercase tracking-[0.16em] text-ink-soft">Parkings</span>
+        <Link
+          href="/recents"
+          className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
+        >
+          Recent
+        </Link>
       </header>
       <div className="space-y-4 px-5 pt-4">
         <SearchCard
@@ -178,33 +197,6 @@ export default function ParkingsPage() {
           onSelectPlace={go}
         />
         {error && <p className="text-sm text-accent-dark">{error}</p>}
-        {recents.length > 0 && !destination && (
-          <section>
-            <p className="text-xs uppercase tracking-[0.16em] text-ink-soft">Recents</p>
-            <div className="mt-2 space-y-2">
-              {recents.map((place) => (
-                <button
-                  key={`${place.name}-${place.location.lat}-${place.location.lng}`}
-                  type="button"
-                  onClick={() =>
-                    go({
-                      id: `recent:${place.location.lat},${place.location.lng}`,
-                      label: place.name,
-                      location: place.location,
-                    })
-                  }
-                  className="flex w-full items-center gap-3 rounded-[4px] border border-line bg-white px-4 py-3 text-left"
-                >
-                  <ClockCounterClockwise size={18} className="shrink-0 text-ink-soft" />
-                  <span className="min-w-0">
-                    <span className="block truncate font-medium">{place.name}</span>
-                    <span className="text-xs text-ink-soft">Recent parking search</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
       </div>
 
       {destination && (
@@ -213,49 +205,40 @@ export default function ParkingsPage() {
             <MapView
               origin={origin}
               destination={destination}
-              parking={parking}
-              selectedParkingId={selectedId}
+              parking={visibleParking}
+              selectedParkingId={selected?.id ?? null}
               onSelectParking={selectParking}
             />
           </section>
           <section className="px-5 pt-4">
-            <div className="mb-3 flex items-end justify-between gap-3">
+            <div className="mb-4 flex items-end justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-ink-soft">Going to</p>
                 <h1 className="mt-1 text-xl font-semibold">{destName}</h1>
               </div>
-              {loadingParking && <span className="text-xs text-ink-soft">Loading…</span>}
-            </div>
-            <div className="mb-4 flex flex-wrap items-center gap-2">
-              <span className="text-xs text-ink-soft">Within</span>
-              {(
-                [
-                  { meters: 500, label: "500 m" },
-                  { meters: 1000, label: "1 km" },
-                  { meters: 2000, label: "2 km" },
-                ] as const
-              ).map((option) => (
-                <button
-                  key={option.meters}
-                  type="button"
-                  onClick={() => setRadiusMeters(option.meters)}
-                  className={`rounded-[4px] border px-3 py-1.5 text-xs font-medium ${
-                    radiusMeters === option.meters
-                      ? "border-accent bg-accent text-white"
-                      : "border-line bg-white text-ink"
-                  }`}
+              <div className="flex items-center gap-3">
+                {loadingParking && <span className="text-xs text-ink-soft">Loading…</span>}
+                <Link
+                  href="/filters"
+                  aria-label="Filters"
+                  className="relative flex h-10 w-10 items-center justify-center rounded-[4px] border border-line bg-white"
                 >
-                  {option.label}
-                </button>
-              ))}
+                  <Funnel size={20} />
+                  {filterCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold text-white">
+                      {filterCount}
+                    </span>
+                  )}
+                </Link>
+              </div>
             </div>
-            {parking.length === 0 && !loadingParking && (
+            {visibleParking.length === 0 && !loadingParking && (
               <p className="rounded-[4px] bg-white px-4 py-4 text-sm text-ink-soft">
                 No lots within this distance. Try a wider range, or suggest one.
               </p>
             )}
             <div className="space-y-3">
-              {parking.map((lot) => (
+              {visibleParking.map((lot) => (
                 <article
                   key={lot.id}
                   className={`rounded-[4px] border bg-white p-4 ${
@@ -264,26 +247,35 @@ export default function ParkingsPage() {
                 >
                   <button type="button" className="w-full text-left" onClick={() => selectParking(lot.id)}>
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-medium">{lot.name}</h3>
-                        <p className="mt-1 text-sm text-ink-soft">
-                          {formatDistance(lot.distanceMeters)} · {formatMinutes(lot.walkingTimeSeconds)} walk
-                        </p>
+                      <h3 className="min-w-0 font-medium">{lot.name}</h3>
+                      <div className="flex shrink-0 flex-col items-end gap-1">
+                        {lot.curated && (
+                          <span className="rounded-[4px] border border-line bg-paper px-2 py-0.5 text-[11px] font-medium">
+                            Yana verified
+                          </span>
+                        )}
+                        <AvailabilityBadge state={lot.availabilityState} />
                       </div>
-                      <AvailabilityBadge state={lot.availabilityState} />
                     </div>
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs text-ink-soft">
-                      {lot.priceText && <span>{lot.priceText}</span>}
-                      {lot.hoursText && <span>{lot.hoursText}</span>}
-                      {lot.curated && <span className="text-moss">Yana catalog</span>}
-                    </div>
+                    <p className="mt-1 text-sm text-ink-soft">
+                      {[
+                        `${formatDistance(lot.distanceMeters)} · ${formatMinutes(lot.walkingTimeSeconds)} walk`,
+                        lot.priceText,
+                        lot.hoursText,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
                   </button>
-                  <Link
-                    href={parkingHref(lot, destination, destName)}
-                    className="mt-3 inline-block text-sm text-accent underline-offset-4 hover:underline"
-                  >
-                    Details
-                  </Link>
+                  <div className="mt-3 flex items-center justify-between gap-3">
+                    <LotTags priceText={lot.priceText} />
+                    <Link
+                      href={parkingHref(lot, destination, destName)}
+                      className="shrink-0 text-sm text-accent underline-offset-4 hover:underline"
+                    >
+                      Details
+                    </Link>
+                  </div>
                 </article>
               ))}
             </div>

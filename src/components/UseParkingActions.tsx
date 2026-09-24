@@ -1,26 +1,47 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { writeTrip } from "@/lib/trip-store";
-import type { Parking } from "@/lib/types";
+import { RESUME_TRIP_KEY, writeTrip } from "@/lib/trip-store";
+import type { Coordinates, Parking } from "@/lib/types";
 
-export function UseParkingActions({ parking }: { parking: Parking }) {
+export function UseParkingActions({
+  parking,
+  destination,
+  destName,
+}: {
+  parking: Parking;
+  destination?: Coordinates | null;
+  destName?: string;
+}) {
   const router = useRouter();
 
+  function rememberTrip() {
+    writeTrip({
+      selectedParking: parking,
+      ...(destination ? { destination, destName: destName || "" } : {}),
+    });
+  }
+
+  function backToTrip() {
+    rememberTrip();
+    sessionStorage.setItem(RESUME_TRIP_KEY, "1");
+    router.push("/");
+  }
+
   function useParking() {
-    writeTrip({ selectedParking: parking });
+    rememberTrip();
     router.push("/roads");
   }
 
   return (
     <div className="mt-8 flex gap-2">
-      <Link
-        href="/"
-        className="flex-1 rounded-[4px] border border-line bg-white px-4 py-3 text-center text-sm font-medium"
+      <button
+        type="button"
+        onClick={backToTrip}
+        className="flex-1 rounded-[4px] border border-line bg-white px-4 py-3 text-sm font-medium"
       >
         Back to trip
-      </Link>
+      </button>
       <button
         type="button"
         onClick={useParking}

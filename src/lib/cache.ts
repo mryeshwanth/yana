@@ -21,6 +21,12 @@ export async function writeCache(key: string, payload: unknown, ttlMs: number) {
   });
 }
 
+export async function clearNearbyCache() {
+  await prisma.parkingCache.deleteMany({
+    where: { key: { startsWith: "nearby:" } },
+  });
+}
+
 export const CACHE_TTL = {
   autocomplete: 7 * DAY_MS,
   nearby: 7 * DAY_MS,
