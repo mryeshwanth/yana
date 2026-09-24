@@ -4,6 +4,13 @@ export type Coordinates = {
 };
 
 export type RoutePreference = "fastest" | "broader_roads" | "family_comfort";
+export type RouteTag = RoutePreference;
+
+export const ROUTE_TAG_LABELS: Record<RouteTag, string> = {
+  fastest: "Fastest",
+  broader_roads: "Broader roads",
+  family_comfort: "Family comfort",
+};
 
 export type AvailabilityState = "live" | "estimated" | "unknown";
 export type AvailabilitySource = "operator" | "places" | "osm" | "live_feed";
@@ -55,7 +62,7 @@ export type AnnotatedRoute = RawRoute & {
 };
 
 export type ComparedRoute = AnnotatedRoute & {
-  preference: RoutePreference;
+  tags: RouteTag[];
   label: string;
   profile: string;
   explanation: string;
@@ -106,12 +113,3 @@ export interface GeocodingProvider {
   autocomplete(query: string, proximity?: Coordinates): Promise<PlaceSuggestion[]>;
   details(id: string): Promise<PlaceDetails | null>;
 }
-
-export const ROUTE_WEIGHTS: Record<
-  RoutePreference,
-  { eta: number; majorRoad: number; narrowRoadPenalty: number }
-> = {
-  fastest: { eta: 1, majorRoad: 0, narrowRoadPenalty: 0 },
-  broader_roads: { eta: 0.6, majorRoad: 0.8, narrowRoadPenalty: 1 },
-  family_comfort: { eta: 0.5, majorRoad: 1, narrowRoadPenalty: 1.2 },
-};

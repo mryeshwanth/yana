@@ -20,11 +20,25 @@ export function overpassFallbacks() {
 }
 
 export function adminPassword() {
-  return process.env.ADMIN_PASSWORD?.trim() || "yana-admin";
+  const value = process.env.ADMIN_PASSWORD?.trim();
+  if (process.env.NODE_ENV === "production") {
+    if (!value || value === "yana-admin") {
+      throw new Error("Set a strong ADMIN_PASSWORD in production");
+    }
+    return value;
+  }
+  return value || "yana-admin";
 }
 
 export function adminSessionSecret() {
-  return process.env.ADMIN_SESSION_SECRET?.trim() || "yana-local-session-secret";
+  const value = process.env.ADMIN_SESSION_SECRET?.trim();
+  if (process.env.NODE_ENV === "production") {
+    if (!value || value === "yana-local-session-secret" || value === "change-me-in-production") {
+      throw new Error("Set ADMIN_SESSION_SECRET in production");
+    }
+    return value;
+  }
+  return value || "yana-local-session-secret";
 }
 
 export function hasGoogleServer() {

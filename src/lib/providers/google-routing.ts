@@ -8,13 +8,12 @@ type GoogleRoute = {
   polyline?: { encodedPolyline?: string };
 };
 
-type RoutingPreference = "TRAFFIC_AWARE" | "TRAFFIC_AWARE_OPTIMAL" | "TRAFFIC_UNAWARE";
+type RoutingPreference = "TRAFFIC_AWARE" | "TRAFFIC_UNAWARE";
 
 export class GoogleRoutingProvider implements RoutingProvider {
   async getRoutes(origin: Coordinates, destination: Coordinates): Promise<RawRoute[]> {
     const batches = await Promise.allSettled([
       computeRoutes(origin, destination, "DRIVE", true, "TRAFFIC_AWARE"),
-      computeRoutes(origin, destination, "DRIVE", true, "TRAFFIC_AWARE_OPTIMAL"),
       computeRoutes(origin, destination, "DRIVE", true, "TRAFFIC_UNAWARE"),
     ]);
     const routes: RawRoute[] = [];

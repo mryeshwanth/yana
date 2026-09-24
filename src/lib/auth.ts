@@ -41,6 +41,7 @@ export async function setAdminCookie() {
   store.set(COOKIE, createAdminToken(), {
     httpOnly: true,
     sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: WEEK_MS / 1000,
   });

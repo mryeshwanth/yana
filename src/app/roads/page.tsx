@@ -10,6 +10,7 @@ import { formatDistance, formatMinutes } from "@/lib/format";
 import { appleMapsDriveUrl, googleMapsDriveUrl } from "@/lib/maps-links";
 import { readPreference } from "@/lib/preferences";
 import { readTrip, subscribeTrip } from "@/lib/trip-store";
+import { ROUTE_TAG_LABELS } from "@/lib/types";
 import type { ComparedRoute, Parking, RoutePreference, WalkLeg } from "@/lib/types";
 
 export default function RoadsPage() {
@@ -17,7 +18,7 @@ export default function RoadsPage() {
   const [routes, setRoutes] = useState<ComparedRoute[]>([]);
   const [walk, setWalk] = useState<WalkLeg | null>(null);
   const [preference, setPreference] = useState<RoutePreference>("broader_roads");
-  const [chosenPreference, setChosenPreference] = useState<RoutePreference | null>(null);
+  const [chosenId, setChosenId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -34,6 +35,7 @@ export default function RoadsPage() {
     if (!trip.origin || !selected || !trip.destination) return;
     let cancelled = false;
     setLoading(true);
+    setError("");
     fetch("/api/routes", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -50,9 +52,10 @@ export default function RoadsPage() {
           setError(data.error);
           return;
         }
-        setRoutes(data.routes ?? []);
+        const next = data.routes ?? [];
+        setRoutes(next);
         setWalk(data.walk ?? null);
-        setChosenPreference(preference);
+        setChosenId(pickDefaultRoute(next, preference)?.id ?? null);
       })
       .catch(() => {
         if (!cancelled) setError("Could not build routes.");
@@ -65,10 +68,7 @@ export default function RoadsPage() {
     };
   }, [trip.origin, selected, trip.destination, preference]);
 
-  const chosen =
-    routes.find((route) => route.preference === (chosenPreference ?? preference)) ??
-    routes[0] ??
-    null;
+  const chosen = routes.find((route) => route.id === chosenId) ?? routes[0] ?? null;
   const destination = trip.destination;
   const origin = trip.origin;
 
@@ -125,17 +125,18 @@ export default function RoadsPage() {
         </div>
         {loading && <p className="text-xs text-ink-soft">Comparing…</p>}
         {routes.map((route) => {
-          const selectedCard = chosen?.preference === route.preference;
+          const selectedCard = chosen?.id === route.id;
+          const parking = { lat: selected.lat, lng: selected.lng };
           return (
             <article
-              key={`${route.preference}-${route.id}`}
+              key={route.id}
               className={`rounded-[4px] border bg-white p-4 ${
                 selectedCard ? "border-accent" : "border-line"
               }`}
             >
               <button
                 type="button"
-                onClick={() => setChosenPreference(route.preference)}
+                onClick={() => setChosenId(route.id)}
                 className="flex w-full items-start gap-3 text-left"
               >
                 {selectedCard ? (
@@ -145,13 +146,32 @@ export default function RoadsPage() {
                 )}
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-3">
-                    <span className="font-medium">{route.label}</span>
-                    <span className="shrink-0 text-right text-sm text-ink-soft">
+                    <span className="font-medium">
                       {formatMinutes(route.durationSeconds)} · {formatDistance(route.distanceMeters)}
-                      {walk ? ` + ${formatMinutes(walk.durationSeconds)} walk` : ""}
                     </span>
+                    {walk && (
+                      <span className="shrink-0 text-sm text-ink-soft">
+                        + {formatMinutes(walk.durationSeconds)} walk
+                      </span>
+                    )}
                   </span>
-                  <span className="mt-0.5 block text-sm text-ink-soft">{route.profile}</span>
+                  {route.tags.length > 0 && (
+                    <span className="mt-2 flex flex-wrap gap-1.5">
+                      {route.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className={`rounded-[4px] border px-2 py-0.5 text-[11px] font-medium ${
+                            tag === preference
+                              ? "border-accent bg-accent text-white"
+                              : "border-line bg-paper text-ink"
+                          }`}
+                        >
+                          {ROUTE_TAG_LABELS[tag]}
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                  <span className="mt-1.5 block text-sm text-ink-soft">{route.profile}</span>
                   <span className="mt-1 block text-sm leading-5 text-ink-soft">{route.explanation}</span>
                 </span>
               </button>
@@ -159,7 +179,7 @@ export default function RoadsPage() {
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <a
                     className="rounded-[4px] bg-accent px-3 py-2.5 text-center text-sm font-semibold text-white"
-                    href={googleMapsDriveUrl(origin, { lat: selected.lat, lng: selected.lng }, destination)}
+                    href={googleMapsDriveUrl(origin, parking, destination, route.coordinates)}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -167,7 +187,7 @@ export default function RoadsPage() {
                   </a>
                   <a
                     className="rounded-[4px] border border-line px-3 py-2.5 text-center text-sm font-medium"
-                    href={appleMapsDriveUrl(origin, { lat: selected.lat, lng: selected.lng }, destination)}
+                    href={appleMapsDriveUrl(origin, parking, destination, route.coordinates)}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -182,4 +202,8 @@ export default function RoadsPage() {
       </section>
     </UserShell>
   );
+}
+
+function pickDefaultRoute(routes: ComparedRoute[], preference: RoutePreference) {
+  return routes.find((route) => route.tags.includes(preference)) ?? routes[0] ?? null;
 }

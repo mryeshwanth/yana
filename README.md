@@ -34,6 +34,24 @@ npm run dev
 
 Open http://localhost:3000. Agent catalog (hidden from users): http://localhost:3000/agent — password `yana-admin` unless you change `ADMIN_PASSWORD`.
 
+## Deploy on Railway
+
+1. New project → Deploy from this GitHub repo.
+2. Add a **PostgreSQL** plugin so `DATABASE_URL` is injected.
+3. Set these variables on the web service (build **and** runtime):
+
+| Variable | Notes |
+|---|---|
+| `DATABASE_URL` | From the Postgres plugin |
+| `GOOGLE_MAPS_API_KEY` | Server key (Places New + Routes) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Browser key (Maps JavaScript). Must exist at **build** time |
+| `ADMIN_PASSWORD` | Required in production. Do not use `yana-admin` |
+| `ADMIN_SESSION_SECRET` | Long random string |
+
+4. Restrict the browser key HTTP referrer to `https://<your-app>.up.railway.app/*` and your custom domain.
+5. First deploy runs `prisma migrate deploy` then `next start`. Health check: `/api/health`.
+6. Optional catalog seed: `railway run npx tsx prisma/seed.ts`
+
 ## PWA
 
 Add to Home Screen from the mobile browser. The app uses a standalone manifest and a light app-shell service worker.
