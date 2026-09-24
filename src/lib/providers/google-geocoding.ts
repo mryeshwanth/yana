@@ -1,3 +1,4 @@
+import { BANGALORE_CENTER } from "../constants";
 import { googleServerKey } from "../env";
 import type { Coordinates, GeocodingProvider, PlaceDetails, PlaceSuggestion } from "../types";
 
@@ -8,14 +9,13 @@ export class GoogleGeocodingProvider implements GeocodingProvider {
       includedRegionCodes: ["in"],
       languageCode: "en",
     };
-    if (proximity) {
-      body.locationBias = {
-        circle: {
-          center: { latitude: proximity.lat, longitude: proximity.lng },
-          radius: 40000,
-        },
-      };
-    }
+    const bias = proximity ?? BANGALORE_CENTER;
+    body.locationBias = {
+      circle: {
+        center: { latitude: bias.lat, longitude: bias.lng },
+        radius: 45000,
+      },
+    };
 
     const response = await fetch("https://places.googleapis.com/v1/places:autocomplete", {
       method: "POST",

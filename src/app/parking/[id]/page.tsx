@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
 import { BrandMark } from "@/components/BrandMark";
+import { UseParkingActions } from "@/components/UseParkingActions";
 import { formatDistance, formatMinutes } from "@/lib/format";
 import { estimateWalk } from "@/lib/geo";
 import { getCuratedLot } from "@/lib/providers/curated-parking";
@@ -16,7 +16,6 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
   const query = await searchParams;
   const decoded = decodeURIComponent(id);
   const dest = numberPair(query.destLat, query.destLng);
-  const destName = first(query.destName) ?? "Destination";
 
   let lot = {
     id: decoded,
@@ -32,45 +31,37 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
     curated: false,
   };
 
-  if (decoded.startsWith("curated:")) {
-    const curated = await getCuratedLot(decoded);
-    if (curated && !curated.hidden) {
-      lot = {
-        id: decoded,
-        name: curated.name,
-        lat: curated.lat,
-        lng: curated.lng,
-        address: curated.address ?? undefined,
-        priceText: curated.priceText ?? undefined,
-        hoursText: curated.hoursText ?? undefined,
-        notes: curated.notes ?? undefined,
-        availabilityState:
-          curated.source === "live_feed" && curated.availabilityState === "live"
-            ? "live"
-            : curated.availabilityState === "live"
-              ? "unknown"
-              : curated.availabilityState,
-        source: curated.source,
-        curated: true,
-      };
-    }
+  const stored = await getCuratedLot(decoded);
+  if (stored && !stored.hidden) {
+    lot = {
+      id: decoded,
+      name: stored.name,
+      lat: stored.lat,
+      lng: stored.lng,
+      address: stored.address ?? undefined,
+      priceText: stored.priceText ?? undefined,
+      hoursText: stored.hoursText ?? undefined,
+      notes: stored.notes ?? undefined,
+      availabilityState:
+        stored.source === "live_feed" && stored.availabilityState === "live"
+          ? "live"
+          : stored.availabilityState === "live"
+            ? "unknown"
+            : stored.availabilityState,
+      source: stored.source,
+      curated: stored.source === "operator",
+    };
   }
 
   const walk = dest && Number.isFinite(lot.lat) ? estimateWalk(dest, { lat: lot.lat, lng: lot.lng }) : null;
-  const tripHref = dest
-    ? `/trip?dlat=${dest.lat}&dlng=${dest.lng}&dname=${encodeURIComponent(destName)}&pid=${encodeURIComponent(decoded)}`
-    : "/";
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-xl px-5 py-8">
       <header className="flex items-center justify-between">
-        <BrandMark />
-        <Link href={tripHref} className="text-sm text-ink-soft underline-offset-4 hover:underline">
-          Back to trip
-        </Link>
+        <BrandMark compact />
       </header>
       <p className="mt-12 text-xs uppercase tracking-[0.18em] text-ink-soft">Parking</p>
-      <h1 className="mt-2 font-serif text-4xl">{lot.name}</h1>
+      <h1 className="mt-2 text-3xl font-semibold">{lot.name}</h1>
       <div className="mt-4 flex items-center gap-2">
         <AvailabilityBadge state={lot.availabilityState} />
         <span className="text-xs text-ink-soft">
@@ -78,7 +69,7 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
           {lot.curated ? " · Yana catalog" : ""}
         </span>
       </div>
-      <dl className="mt-8 space-y-4 rounded-[28px] border border-line bg-white p-5">
+      <dl className="mt-8 space-y-4 rounded-[4px] border border-line bg-white p-5">
         {lot.address && (
           <div>
             <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Address</dt>
@@ -108,12 +99,24 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
           </div>
         )}
       </dl>
-      <Link
-        href={tripHref}
-        className="mt-8 inline-flex rounded-full bg-ink px-5 py-3 text-sm font-medium text-paper"
-      >
-        Use this parking
-      </Link>
+      <UseParkingActions
+        parking={{
+          id: lot.id,
+          name: lot.name,
+          lat: lot.lat,
+          lng: lot.lng,
+          address: lot.address,
+          distanceMeters: walk?.walkingDistanceMeters ?? 0,
+          walkingTimeSeconds: walk?.walkingTimeSeconds ?? 0,
+          walkingDistanceMeters: walk?.walkingDistanceMeters ?? 0,
+          priceText: lot.priceText,
+          hoursText: lot.hoursText,
+          notes: lot.notes,
+          availabilityState: lot.availabilityState,
+          source: lot.source,
+          curated: lot.curated,
+        }}
+      />
     </main>
   );
 }

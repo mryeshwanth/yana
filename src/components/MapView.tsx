@@ -16,6 +16,8 @@ type MapViewProps = {
   onSelectParking?: (id: string) => void;
   onMapClick?: (point: Coordinates) => void;
   interactivePin?: Coordinates | null;
+  pinDraggable?: boolean;
+  followPin?: boolean;
 };
 
 const SOURCE_ROUTE = "yana-route";
@@ -39,6 +41,8 @@ function OsmMapView({
   onSelectParking,
   onMapClick,
   interactivePin,
+  pinDraggable,
+  followPin = true,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -105,7 +109,20 @@ function OsmMapView({
     for (const lot of parking) {
       addMarker(lot, lot.id === selectedParkingId ? "parking selected" : "parking", lot.id);
     }
-    if (interactivePin) addMarker(interactivePin, "destination");
+    if (interactivePin) {
+      const el = document.createElement("div");
+      el.className = "map-marker destination";
+      const marker = new maplibregl.Marker({ element: el, draggable: Boolean(pinDraggable) })
+        .setLngLat([interactivePin.lng, interactivePin.lat])
+        .addTo(map);
+      if (pinDraggable) {
+        marker.on("dragend", () => {
+          const point = marker.getLngLat();
+          onClickRef.current?.({ lat: point.lat, lng: point.lng });
+        });
+      }
+      markersRef.current.push(marker);
+    }
 
     const focus = [
       origin,
@@ -115,23 +132,23 @@ function OsmMapView({
       ...(route?.coordinates ?? []),
     ].filter((point): point is Coordinates => Boolean(point));
 
-    if (focus.length === 1) {
-      map.easeTo({ center: [focus[0].lng, focus[0].lat], zoom: 14, duration: 400 });
-    } else if (focus.length > 1) {
+    if (followPin && focus.length === 1) {
+      map.easeTo({ center: [focus[0].lng, focus[0].lat], zoom: 16, duration: 400 });
+    } else if (followPin && focus.length > 1) {
       const bounds = focus.reduce(
         (box, point) => box.extend([point.lng, point.lat]),
         new maplibregl.LngLatBounds([focus[0].lng, focus[0].lat], [focus[0].lng, focus[0].lat]),
       );
       map.fitBounds(bounds, { padding: 56, duration: 400, maxZoom: 15 });
     }
-  }, [origin, destination, parking, selectedParkingId, interactivePin, route]);
+  }, [origin, destination, parking, selectedParkingId, interactivePin, route, pinDraggable, followPin]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
     const draw = () => {
-      setLine(map, SOURCE_ROUTE, route?.coordinates ?? [], "#c45c26", 5);
+      setLine(map, SOURCE_ROUTE, route?.coordinates ?? [], "#f97316", 5);
       setLine(map, SOURCE_WALK, walk?.coordinates ?? [], "#3f5d48", 3, true);
     };
 

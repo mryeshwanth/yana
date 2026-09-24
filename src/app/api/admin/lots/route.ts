@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/auth";
+import { LOT_KIND_IDS } from "@/lib/lot-kinds";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -11,6 +12,7 @@ const schema = z.object({
   priceText: z.string().trim().max(80).optional().nullable(),
   hoursText: z.string().trim().max(120).optional().nullable(),
   notes: z.string().trim().max(400).optional().nullable(),
+  lotKind: z.enum(LOT_KIND_IDS).optional().nullable(),
   source: z.enum(["operator", "places", "osm", "live_feed"]).default("operator"),
   availabilityState: z.enum(["live", "estimated", "unknown"]).default("unknown"),
   hidden: z.boolean().default(false),
@@ -35,8 +37,15 @@ export async function POST(request: Request) {
   }
   const availabilityState =
     parsed.data.source === "live_feed" ? parsed.data.availabilityState : parsed.data.availabilityState === "live" ? "unknown" : parsed.data.availabilityState;
-  const lot = await prisma.parkingLot.create({
-    data: { ...parsed.data, availabilityState },
-  });
-  return NextResponse.json({ lot });
+  try {
+    const lot = await prisma.parkingLot.create({
+      data: { ...parsed.data, availabilityState },
+    });
+    return NextResponse.json({ lot });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not add that lot." },
+      { status: 500 },
+    );
+  }
 }

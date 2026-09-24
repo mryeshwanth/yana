@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { CACHE_TTL, readCache, writeCache } from "@/lib/cache";
 import { getDriveRoutes, getWalkLeg } from "@/lib/providers/routing";
 import { roadClassProvider } from "@/lib/providers/osm-road-class";
 import { annotateRoute, compareRoutes } from "@/lib/scoring";
+import type { ComparedRoute, WalkLeg } from "@/lib/types";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -17,6 +19,21 @@ export async function POST(request: Request) {
     );
   }
 
+  const cacheKey = [
+    "routes",
+    body.origin.lat.toFixed(3),
+    body.origin.lng.toFixed(3),
+    body.parking.lat.toFixed(3),
+    body.parking.lng.toFixed(3),
+    body.destination.lat.toFixed(3),
+    body.destination.lng.toFixed(3),
+  ].join(":");
+
+  const cached = await readCache<{ routes: ComparedRoute[]; walk: WalkLeg }>(cacheKey);
+  if (cached) {
+    return NextResponse.json(cached);
+  }
+
   try {
     const [rawRoutes, walk] = await Promise.all([
       getDriveRoutes(body.origin, body.parking),
@@ -30,10 +47,12 @@ export async function POST(request: Request) {
       }),
     );
 
-    return NextResponse.json({
+    const payload = {
       routes: compareRoutes(annotated),
       walk,
-    });
+    };
+    await writeCache(cacheKey, payload, CACHE_TTL.routes);
+    return NextResponse.json(payload);
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Routing failed" },

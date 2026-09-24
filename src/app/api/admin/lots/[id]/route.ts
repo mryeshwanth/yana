@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { isAdmin } from "@/lib/auth";
+import { LOT_KIND_IDS } from "@/lib/lot-kinds";
 import { prisma } from "@/lib/prisma";
 
 const schema = z.object({
@@ -11,6 +12,7 @@ const schema = z.object({
   priceText: z.string().trim().max(80).optional().nullable(),
   hoursText: z.string().trim().max(120).optional().nullable(),
   notes: z.string().trim().max(400).optional().nullable(),
+  lotKind: z.enum(LOT_KIND_IDS).optional().nullable(),
   source: z.enum(["operator", "places", "osm", "live_feed"]).optional(),
   availabilityState: z.enum(["live", "estimated", "unknown"]).optional(),
   hidden: z.boolean().optional(),

@@ -1,6 +1,7 @@
 import type { RoutePreference } from "./types";
 
 const KEY = "yana.preference";
+const ONBOARDED = "yana.onboarded";
 
 export function readPreference(): RoutePreference {
   if (typeof window === "undefined") return "broader_roads";
@@ -13,6 +14,14 @@ export function readPreference(): RoutePreference {
 
 export function writePreference(value: RoutePreference) {
   window.localStorage.setItem(KEY, value);
+}
+
+export function isOnboarded() {
+  return window.localStorage.getItem(ONBOARDED) === "1";
+}
+
+export function markOnboarded() {
+  window.localStorage.setItem(ONBOARDED, "1");
 }
 
 export const PREFERENCE_COPY: Record<

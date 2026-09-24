@@ -63,10 +63,10 @@ export function SearchBox({
         onChange={(event) => setQuery(event.target.value)}
         placeholder={placeholder}
         autoComplete="off"
-        className="w-full rounded-2xl border border-line bg-white px-4 py-3.5 text-base text-ink outline-none ring-clay/30 placeholder:text-ink-soft/70 focus:ring-4"
+        className="w-full rounded-[4px] border border-line bg-white px-4 py-3.5 text-base text-ink outline-none ring-clay/30 placeholder:text-ink-soft/70 focus:ring-4"
       />
       {(loading || suggestions.length > 0) && (
-        <ul className="absolute z-20 mt-2 w-full overflow-hidden rounded-2xl border border-line bg-white shadow-[0_16px_40px_rgba(33,28,22,0.12)]">
+        <ul className="absolute z-20 mt-2 w-full overflow-hidden rounded-[4px] border border-line bg-white shadow-[0_16px_40px_rgba(33,28,22,0.12)]">
           {loading && suggestions.length === 0 && (
             <li className="px-4 py-3 text-sm text-ink-soft">Searching…</li>
           )}

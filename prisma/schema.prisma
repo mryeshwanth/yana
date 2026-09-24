@@ -35,16 +35,31 @@ model ParkingLot {
   priceText         String?
   hoursText         String?
   notes             String?
+  lotKind           String?
   source            AvailabilitySource @default(operator)
   availabilityState AvailabilityState  @default(unknown)
   hidden            Boolean            @default(false)
   city              String             @default("bangalore")
-  externalId        String?
+  externalId        String?            @unique
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
 
   @@index([city, hidden])
   @@index([lat, lng])
+}
+
+model Destination {
+  id            String   @id @default(cuid())
+  googlePlaceId String?  @unique
+  name          String
+  address       String?
+  lat           Float
+  lng           Float
+  queryText     String?
+  lastSeen      DateTime @default(now())
+  createdAt     DateTime @default(now())
+
+  @@index([name])
 }
 
 model ParkingSuggestion {

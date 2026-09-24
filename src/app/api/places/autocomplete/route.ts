@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   try {
     const suggestions = await autocompletePlaces(q, proximity);
-    return NextResponse.json({ suggestions });
+    return NextResponse.json({ suggestions, provider: process.env.GOOGLE_MAPS_API_KEY ? "google" : "osm" });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Search failed" },

@@ -15,7 +15,7 @@ export class CuratedParkingProvider implements ParkingProvider {
           Math.abs(lot.lng - lng) <= radiusDegrees + 0.01,
       )
       .map((lot) => ({
-        id: `curated:${lot.id}`,
+        id: lot.source === "operator" ? `curated:${lot.id}` : (lot.externalId ?? `curated:${lot.id}`),
         name: lot.name,
         lat: lot.lat,
         lng: lot.lng,
@@ -30,12 +30,15 @@ export class CuratedParkingProvider implements ParkingProvider {
               ? "unknown"
               : lot.availabilityState,
         source: lot.source,
-        curated: true,
+        curated: lot.source === "operator",
       }));
   }
 }
 
 export async function getCuratedLot(id: string) {
-  const lotId = id.replace(/^curated:/, "");
+  if (id.startsWith("places:") || id.startsWith("osm:")) {
+    return prisma.parkingLot.findUnique({ where: { externalId: id } });
+  }
+  const lotId = id.replace(/^curated:/, "").replace(/^lot:/, "");
   return prisma.parkingLot.findUnique({ where: { id: lotId } });
 }

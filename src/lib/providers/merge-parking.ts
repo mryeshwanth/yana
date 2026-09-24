@@ -1,5 +1,7 @@
+import { CACHE_TTL, readCache, writeCache } from "../cache";
 import { estimateWalk, haversineMeters } from "../geo";
 import { hasGoogleServer } from "../env";
+import { upsertGoogleParking } from "../persist";
 import type { Coordinates, Parking, ParkingCandidate, ParkingProvider } from "../types";
 import { CuratedParkingProvider } from "./curated-parking";
 import { GoogleParkingProvider } from "./google-parking";
@@ -12,8 +14,14 @@ const osm = new OsmParkingProvider();
 
 export async function searchNearbyParking(
   destination: Coordinates,
-  radiusMeters = 1600,
+  radiusMeters = 1000,
 ): Promise<Parking[]> {
+  const cacheKey = `nearby:v2:${destination.lat.toFixed(3)}:${destination.lng.toFixed(3)}:${radiusMeters}`;
+  const cached = await readCache<Parking[]>(cacheKey);
+  if (cached?.length) {
+    return cached;
+  }
+
   const results = await Promise.allSettled([
     curated.searchNearby(destination.lat, destination.lng, radiusMeters + 200),
     hasGoogleServer()
@@ -23,9 +31,13 @@ export async function searchNearbyParking(
   ]);
 
   const buckets = results.map((result) => (result.status === "fulfilled" ? result.value : []));
+  const googleLots = buckets[1] ?? [];
+  if (googleLots.length > 0) {
+    await upsertGoogleParking(googleLots).catch(() => undefined);
+  }
   const merged = mergeCandidates(buckets.flat());
 
-  return merged
+  const parking = merged
     .map((candidate) => {
       const distanceMeters = Math.round(
         haversineMeters(destination, { lat: candidate.lat, lng: candidate.lng }),
@@ -41,11 +53,13 @@ export async function searchNearbyParking(
       };
     })
     .filter((item): item is Parking => Boolean(item))
-    .sort((a, b) => {
-      if (a.curated !== b.curated) return a.curated ? -1 : 1;
-      return a.distanceMeters - b.distanceMeters;
-    })
+    .sort((a, b) => a.distanceMeters - b.distanceMeters)
     .slice(0, 20);
+
+  if (parking.length > 0) {
+    await writeCache(cacheKey, parking, CACHE_TTL.nearby);
+  }
+  return parking;
 }
 
 export function mergeCandidates(candidates: ParkingCandidate[]): ParkingCandidate[] {

@@ -14,6 +14,8 @@ type Props = {
   onSelectParking?: (id: string) => void;
   onMapClick?: (point: Coordinates) => void;
   interactivePin?: Coordinates | null;
+  pinDraggable?: boolean;
+  followPin?: boolean;
 };
 
 type GoogleMaps = typeof google.maps;
@@ -29,6 +31,8 @@ export function GoogleMapView({
   onSelectParking,
   onMapClick,
   interactivePin,
+  pinDraggable,
+  followPin = true,
 }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
@@ -93,17 +97,41 @@ export function GoogleMapView({
     };
 
     if (origin) addMarker(origin, "#211c16");
-    if (destination) addMarker(destination, "#c45c26");
+    if (destination) addMarker(destination, "#f97316");
     for (const lot of parking) {
-      addMarker(lot, lot.id === selectedParkingId ? "#c45c26" : "#3f5d48", lot.id);
+      addMarker(lot, lot.id === selectedParkingId ? "#f97316" : "#3f5d48", lot.id);
     }
-    if (interactivePin) addMarker(interactivePin, "#c45c26");
+    if (interactivePin) {
+      const marker = new maps.Marker({
+        map,
+        position: interactivePin,
+        draggable: Boolean(pinDraggable),
+        title: pinDraggable ? "Drag to set the lot" : undefined,
+        icon: {
+          path: maps.SymbolPath.CIRCLE,
+          scale: 10,
+          fillColor: "#f97316",
+          fillOpacity: 1,
+          strokeColor: "#ffffff",
+          strokeWeight: 3,
+        },
+      });
+      if (pinDraggable) {
+        marker.addListener("dragend", () => {
+          const position = marker.getPosition();
+          if (position) {
+            onClickRef.current?.({ lat: position.lat(), lng: position.lng() });
+          }
+        });
+      }
+      overlaysRef.current.push(marker);
+    }
 
     if (route && route.coordinates.length > 1) {
       const line = new maps.Polyline({
         map,
         path: route.coordinates,
-        strokeColor: "#c45c26",
+        strokeColor: "#f97316",
         strokeWeight: 5,
         strokeOpacity: 0.9,
       });
@@ -129,15 +157,15 @@ export function GoogleMapView({
       ...(route?.coordinates ?? []),
     ].filter((point): point is Coordinates => Boolean(point));
 
-    if (focus.length === 1) {
+    if (followPin && focus.length === 1) {
       map.panTo(focus[0]);
-      map.setZoom(14);
-    } else if (focus.length > 1) {
+      map.setZoom(16);
+    } else if (followPin && focus.length > 1) {
       const bounds = new maps.LatLngBounds();
       focus.forEach((point) => bounds.extend(point));
       map.fitBounds(bounds, 56);
     }
-  }, [origin, destination, parking, selectedParkingId, route, walk, interactivePin]);
+  }, [origin, destination, parking, selectedParkingId, route, walk, interactivePin, pinDraggable, followPin]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }

@@ -13,20 +13,36 @@ type NominatimHit = {
   name?: string;
 };
 
+export async function reverseGeocodeNominatim(point: Coordinates): Promise<string | null> {
+  const url = new URL("https://nominatim.openstreetmap.org/reverse");
+  url.searchParams.set("lat", String(point.lat));
+  url.searchParams.set("lon", String(point.lng));
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("zoom", "16");
+  url.searchParams.set("addressdetails", "1");
+
+  const response = await fetch(url, { headers: HEADERS });
+  if (!response.ok) return null;
+  const hit = (await response.json()) as NominatimHit & {
+    address?: { suburb?: string; neighbourhood?: string; city?: string; town?: string };
+  };
+  const short =
+    hit.name ||
+    hit.address?.neighbourhood ||
+    hit.address?.suburb ||
+    hit.display_name.split(",")[0];
+  return short?.trim() || null;
+}
+
 export class NominatimGeocodingProvider implements GeocodingProvider {
   async autocomplete(query: string, proximity?: Coordinates): Promise<PlaceSuggestion[]> {
     const url = new URL("https://nominatim.openstreetmap.org/search");
-    url.searchParams.set("q", query);
+    const biasedQuery = /bengaluru|bangalore/i.test(query) ? query : `${query} Bengaluru`;
+    url.searchParams.set("q", biasedQuery);
     url.searchParams.set("format", "jsonv2");
     url.searchParams.set("addressdetails", "1");
     url.searchParams.set("limit", "6");
     url.searchParams.set("countrycodes", "in");
-    if (proximity) {
-      url.searchParams.set(
-        "viewbox",
-        `${proximity.lng - 0.25},${proximity.lat - 0.25},${proximity.lng + 0.25},${proximity.lat + 0.25}`,
-      );
-    }
 
     const response = await fetch(url, { headers: HEADERS });
     if (!response.ok) {
