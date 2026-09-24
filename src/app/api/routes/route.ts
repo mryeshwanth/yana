@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   }
 
   const cacheKey = [
-    "routes:v3",
+    "routes:v6",
     body.origin.lat.toFixed(3),
     body.origin.lng.toFixed(3),
     body.parking.lat.toFixed(3),

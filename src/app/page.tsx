@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Funnel, PlusCircle } from "@phosphor-icons/react";
+import { CaretRight, Funnel, PlusCircle } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
 import { LotTags } from "@/components/LotTags";
@@ -245,37 +245,29 @@ export default function ParkingsPage() {
                     lot.id === selected?.id ? "border-accent shadow-sm" : "border-line"
                   }`}
                 >
-                  <button type="button" className="w-full text-left" onClick={() => selectParking(lot.id)}>
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="min-w-0 font-medium">{lot.name}</h3>
-                      <div className="flex shrink-0 flex-col items-end gap-1">
-                        {lot.curated && (
-                          <span className="rounded-[4px] border border-line bg-paper px-2 py-0.5 text-[11px] font-medium">
-                            Yana verified
-                          </span>
-                        )}
-                        <AvailabilityBadge state={lot.availabilityState} />
-                      </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <button type="button" className="min-w-0 flex-1 text-left" onClick={() => selectParking(lot.id)}>
+                      <h3 className="font-medium">{lot.name}</h3>
+                      <p className="mt-1 text-sm text-ink-soft">
+                        {formatDistance(lot.distanceMeters)} · {formatMinutes(lot.walkingTimeSeconds)} walk
+                      </p>
+                    </button>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <Link
+                        href={parkingHref(lot, destination, destName)}
+                        className="inline-flex items-center gap-0.5 text-sm text-accent underline-offset-4 hover:underline"
+                      >
+                        Details
+                        <CaretRight size={14} weight="bold" />
+                      </Link>
+                      <AvailabilityBadge state={lot.availabilityState} />
                     </div>
-                    <p className="mt-1 text-sm text-ink-soft">
-                      {[
-                        `${formatDistance(lot.distanceMeters)} · ${formatMinutes(lot.walkingTimeSeconds)} walk`,
-                        lot.priceText,
-                        lot.hoursText,
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </button>
-                  <div className="mt-3 flex items-center justify-between gap-3">
-                    <LotTags priceText={lot.priceText} />
-                    <Link
-                      href={parkingHref(lot, destination, destName)}
-                      className="shrink-0 text-sm text-accent underline-offset-4 hover:underline"
-                    >
-                      Details
-                    </Link>
                   </div>
+                  {(priceTag(lot.priceText) || lot.curated) && (
+                    <div className="mt-3">
+                      <LotTags priceText={lot.priceText} verified={lot.curated} />
+                    </div>
+                  )}
                 </article>
               ))}
             </div>

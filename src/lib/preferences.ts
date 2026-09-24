@@ -26,18 +26,21 @@ export function markOnboarded() {
 
 export const PREFERENCE_COPY: Record<
   RoutePreference,
-  { title: string; body: string }
+  { title: string; body: string; for: string }
 > = {
   fastest: {
     title: "Fastest",
     body: "Lowest drive time. May use more local or inner roads.",
+    for: "Suits regular commuters who know the area and want to save time.",
   },
   broader_roads: {
     title: "Broader Roads",
     body: "Prefers major and wider roads, even if it adds a few minutes.",
+    for: "Suits new drivers, and women or others who prefer extra caution on main roads.",
   },
   family_comfort: {
     title: "Family Comfort",
-    body: "Stronger preference for major roads and fewer narrow segments. Not a safety claim.",
+    body: "Leans hardest toward major roads and fewer tight stretches.",
+    for: "Suits family trips, night drives, and anyone traveling with kids or elders.",
   },
 };

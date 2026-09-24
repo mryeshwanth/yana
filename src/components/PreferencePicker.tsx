@@ -38,6 +38,9 @@ export function PreferencePicker({
               <span className="mt-0.5 block text-sm leading-5 text-ink-soft">
                 {PREFERENCE_COPY[option].body}
               </span>
+              <span className="mt-1.5 block text-sm leading-5 text-ink-soft">
+                {PREFERENCE_COPY[option].for}
+              </span>
             </span>
           </button>
         );

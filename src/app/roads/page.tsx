@@ -9,12 +9,13 @@ import { UserShell } from "@/components/UserShell";
 import { formatDistance, formatMinutes } from "@/lib/format";
 import { appleMapsDriveUrl, googleMapsDriveUrl } from "@/lib/maps-links";
 import { readPreference } from "@/lib/preferences";
-import { readTrip, subscribeTrip } from "@/lib/trip-store";
+import { EMPTY_TRIP, readTrip, subscribeTrip } from "@/lib/trip-store";
 import { ROUTE_TAG_LABELS } from "@/lib/types";
 import type { ComparedRoute, Parking, RoutePreference, WalkLeg } from "@/lib/types";
 
 export default function RoadsPage() {
-  const [trip, setTrip] = useState(readTrip());
+  const [ready, setReady] = useState(false);
+  const [trip, setTrip] = useState(EMPTY_TRIP);
   const [routes, setRoutes] = useState<ComparedRoute[]>([]);
   const [walk, setWalk] = useState<WalkLeg | null>(null);
   const [preference, setPreference] = useState<RoutePreference>("broader_roads");
@@ -24,9 +25,9 @@ export default function RoadsPage() {
 
   useEffect(() => {
     setPreference(readPreference());
-    const refresh = () => setTrip(readTrip());
-    refresh();
-    return subscribeTrip(refresh);
+    setTrip(readTrip());
+    setReady(true);
+    return subscribeTrip(() => setTrip(readTrip()));
   }, []);
 
   const selected = trip.selectedParking;
@@ -72,18 +73,26 @@ export default function RoadsPage() {
   const destination = trip.destination;
   const origin = trip.origin;
 
+  const header = (
+    <header className="flex items-center justify-between px-5 pt-6">
+      <BrandMark compact />
+      <Link
+        href="/recents"
+        className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
+      >
+        Recent
+      </Link>
+    </header>
+  );
+
+  if (!ready) {
+    return <UserShell current="roads">{header}</UserShell>;
+  }
+
   if (!destination || !selected) {
     return (
       <UserShell current="roads">
-        <header className="flex items-center justify-between px-5 pt-6">
-          <BrandMark compact />
-          <Link
-            href="/recents"
-            className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
-          >
-            Recent
-          </Link>
-        </header>
+        {header}
         <div className="px-5 pt-16">
           <h1 className="text-3xl font-semibold">Pick parking first</h1>
           <p className="mt-3 text-ink-soft">
@@ -99,15 +108,7 @@ export default function RoadsPage() {
 
   return (
     <UserShell current="roads">
-      <header className="flex items-center justify-between px-5 pt-6">
-        <BrandMark compact />
-        <Link
-          href="/recents"
-          className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
-        >
-          Recent
-        </Link>
-      </header>
+      {header}
       <section className="mx-5 mt-4 h-52 overflow-hidden rounded-[4px] border border-line">
         <MapView
           origin={origin}
@@ -147,23 +148,20 @@ export default function RoadsPage() {
                 <span className="min-w-0 flex-1">
                   <span className="flex items-baseline justify-between gap-3">
                     <span className="font-medium">
-                      {formatMinutes(route.durationSeconds)} · {formatDistance(route.distanceMeters)}
+                      {formatMinutes(route.durationSeconds)} drive
+                      {walk ? ` + ${formatMinutes(walk.durationSeconds)} walk` : ""}
                     </span>
-                    {walk && (
-                      <span className="shrink-0 text-sm text-ink-soft">
-                        + {formatMinutes(walk.durationSeconds)} walk
-                      </span>
-                    )}
+                    <span className="shrink-0 text-sm text-ink-soft">
+                      {formatDistance(route.distanceMeters)}
+                    </span>
                   </span>
                   {route.tags.length > 0 && (
                     <span className="mt-2 flex flex-wrap gap-1.5">
                       {route.tags.map((tag) => (
                         <span
                           key={tag}
-                          className={`rounded-[4px] border px-2 py-0.5 text-[11px] font-medium ${
-                            tag === preference
-                              ? "border-accent bg-accent text-white"
-                              : "border-line bg-paper text-ink"
+                          className={`rounded-[4px] border bg-paper px-2 py-0.5 text-[11px] font-medium text-ink ${
+                            tag === preference ? "border-accent" : "border-line"
                           }`}
                         >
                           {ROUTE_TAG_LABELS[tag]}
@@ -171,14 +169,15 @@ export default function RoadsPage() {
                       ))}
                     </span>
                   )}
-                  <span className="mt-1.5 block text-sm text-ink-soft">{route.profile}</span>
-                  <span className="mt-1 block text-sm leading-5 text-ink-soft">{route.explanation}</span>
+                  {route.explanation && (
+                    <span className="mt-1.5 block text-sm text-ink-soft">{route.explanation}</span>
+                  )}
                 </span>
               </button>
               {selectedCard && origin && (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <a
-                    className="rounded-[4px] bg-accent px-3 py-2.5 text-center text-sm font-semibold text-white"
+                    className="rounded-[4px] border border-line bg-white px-3 py-2.5 text-center text-sm font-medium"
                     href={googleMapsDriveUrl(origin, parking, destination, route.coordinates)}
                     target="_blank"
                     rel="noreferrer"
@@ -186,7 +185,7 @@ export default function RoadsPage() {
                     Use Google Maps
                   </a>
                   <a
-                    className="rounded-[4px] border border-line px-3 py-2.5 text-center text-sm font-medium"
+                    className="rounded-[4px] border border-line bg-white px-3 py-2.5 text-center text-sm font-medium"
                     href={appleMapsDriveUrl(origin, parking, destination, route.coordinates)}
                     target="_blank"
                     rel="noreferrer"

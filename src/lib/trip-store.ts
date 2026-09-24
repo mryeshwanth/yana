@@ -10,16 +10,21 @@ export type TripState = {
   selectedParking: Parking | null;
 };
 
+export const EMPTY_TRIP: TripState = {
+  origin: null,
+  destination: null,
+  destName: "",
+  selectedParking: null,
+};
+
 export function readTrip(): TripState {
-  if (typeof window === "undefined") {
-    return { origin: null, destination: null, destName: "", selectedParking: null };
-  }
+  if (typeof window === "undefined") return EMPTY_TRIP;
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return { origin: null, destination: null, destName: "", selectedParking: null };
+    if (!raw) return EMPTY_TRIP;
     return JSON.parse(raw) as TripState;
   } catch {
-    return { origin: null, destination: null, destName: "", selectedParking: null };
+    return EMPTY_TRIP;
   }
 }
 

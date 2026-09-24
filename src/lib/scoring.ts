@@ -12,7 +12,7 @@ export function compareRoutes(routes: AnnotatedRoute[]): ComparedRoute[] {
   const fastest = [...unique].sort((a, b) => a.durationSeconds - b.durationSeconds)[0];
   const mixKnown = unique.some((route) => route.majorShare > 0 || route.narrowShare > 0);
   const broader = mixKnown ? pickBroader(unique) : null;
-  const family = mixKnown ? pickFamily(unique) : null;
+  const family = mixKnown ? pickFamily(unique, unique.length > 1 ? fastest.id : undefined) : null;
 
   return unique
     .sort((a, b) => a.durationSeconds - b.durationSeconds)
@@ -68,19 +68,32 @@ function sample(coordinates: { lat: number; lng: number }[]) {
 
 function pickBroader(routes: AnnotatedRoute[]) {
   return [...routes].sort((a, b) => {
-    if (b.majorShare !== a.majorShare) return b.majorShare - a.majorShare;
+    if (Math.abs(b.majorShare - a.majorShare) > 0.08) return b.majorShare - a.majorShare;
     return a.durationSeconds - b.durationSeconds;
   })[0];
 }
 
-function pickFamily(routes: AnnotatedRoute[]) {
-  return [...routes].sort((a, b) => {
-    const aScore = a.narrowShare * 2 + a.narrowSegmentCount * 0.04;
-    const bScore = b.narrowShare * 2 + b.narrowSegmentCount * 0.04;
-    if (aScore !== bScore) return aScore - bScore;
-    if (b.majorShare !== a.majorShare) return b.majorShare - a.majorShare;
+function familyScore(route: AnnotatedRoute) {
+  return route.narrowShare * 2 + route.narrowSegmentCount * 0.04;
+}
+
+function pickFamily(routes: AnnotatedRoute[], avoidId?: string) {
+  const ranked = [...routes].sort((a, b) => {
+    const delta = familyScore(a) - familyScore(b);
+    if (Math.abs(delta) > 0.06) return delta;
+    if (avoidId) {
+      if (a.id === avoidId) return 1;
+      if (b.id === avoidId) return -1;
+    }
     return a.durationSeconds - b.durationSeconds;
-  })[0];
+  });
+  const best = ranked[0];
+  if (!best) return null;
+  if (!avoidId || best.id !== avoidId) return best;
+
+  const next = ranked.find((route) => route.id !== avoidId);
+  if (next && familyScore(next) <= familyScore(best) + 0.15) return next;
+  return best;
 }
 
 function profileFor(route: AnnotatedRoute) {
@@ -92,22 +105,23 @@ function profileFor(route: AnnotatedRoute) {
 }
 
 function explanationFor(route: AnnotatedRoute, tags: RouteTag[], extraMinutes: number) {
-  const parts: string[] = [];
-  if (tags.includes("fastest")) {
-    parts.push("Shortest drive time.");
-  } else if (extraMinutes > 0) {
-    parts.push(`Adds ${extraMinutes} minute${extraMinutes === 1 ? "" : "s"} vs the fastest option.`);
-  }
   const mixUnknown = route.majorShare === 0 && route.narrowShare === 0;
-  if (mixUnknown) {
-    parts.push("Road-width mix was unavailable for this path.");
-    return parts.join(" ");
+  const majorPct = Math.round(route.majorShare * 100);
+  const mix = mixUnknown
+    ? ""
+    : route.majorShare >= 0.55
+      ? `mostly on major roads (${majorPct}%)`
+      : route.narrowShare > 0.28
+        ? `more local roads (${majorPct}% major)`
+        : `a mixed road split (${majorPct}% major)`;
+
+  if (tags.includes("fastest")) {
+    return mix ? `Shortest drive, ${mix}.` : "Shortest drive time.";
   }
-  parts.push(`${Math.round(route.majorShare * 100)}% on major roads.`);
-  if (route.narrowSegmentCount > 0) {
-    parts.push(
-      `${route.narrowSegmentCount} narrow segment${route.narrowSegmentCount === 1 ? "" : "s"}.`,
-    );
+  if (extraMinutes > 0) {
+    return mix
+      ? `Adds ${extraMinutes} min, ${mix}.`
+      : `Adds ${extraMinutes} min vs the fastest option.`;
   }
-  return parts.join(" ");
+  return mix ? `Same time, ${mix}.` : "Same drive time as the fastest option.";
 }
