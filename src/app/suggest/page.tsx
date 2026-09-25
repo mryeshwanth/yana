@@ -20,6 +20,13 @@ export default function SuggestPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const lat = Number(params.get("lat"));
+    const lng = Number(params.get("lng"));
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      setPin({ lat, lng });
+      return;
+    }
     const trip = readTrip();
     if (trip.destination) setPin(trip.destination);
   }, []);

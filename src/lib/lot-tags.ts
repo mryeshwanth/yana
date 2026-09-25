@@ -1,5 +1,9 @@
 export type PriceTag = "Free" | "Free + paid" | "Paid";
 
+export function isOnsiteParking(lot: { id?: string; notes?: string | null }) {
+  return Boolean(lot.id?.startsWith("onsite:") || lot.notes?.toLowerCase().includes("on-site"));
+}
+
 export function priceTag(priceText?: string | null): PriceTag | null {
   if (!priceText) return null;
   const value = priceText.trim();

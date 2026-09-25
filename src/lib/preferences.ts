@@ -40,7 +40,7 @@ export const PREFERENCE_COPY: Record<
   },
   family_comfort: {
     title: "Family Comfort",
-    body: "Leans hardest toward major roads and fewer tight stretches.",
-    for: "Suits family trips, night drives, and anyone traveling with kids or elders.",
+    body: "Fewer inner stretches and no long detour. Can be the same path as Fastest or Broader roads.",
+    for: "Suits trips with kids, elders, or luggage — less weaving, not a long extra drive.",
   },
 };

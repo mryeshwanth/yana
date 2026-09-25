@@ -13,9 +13,10 @@ import { BANGALORE_CENTER } from "@/lib/constants";
 import { formatDistance, formatMinutes } from "@/lib/format";
 import { requestLocation } from "@/lib/location";
 import { activeFilterCount, DEFAULT_FILTERS, readFilters, type ParkingFilters } from "@/lib/filters";
-import { priceTag } from "@/lib/lot-tags";
+import { isOnsiteParking, priceTag } from "@/lib/lot-tags";
 import { OPEN_RECENT_KEY, pushRecent } from "@/lib/recents";
 import { readTrip, RESUME_TRIP_KEY, writeTrip } from "@/lib/trip-store";
+import { useRoutePreview } from "@/lib/use-route-preview";
 import type { Coordinates, Parking, PlaceSuggestion } from "@/lib/types";
 
 export default function ParkingsPage() {
@@ -69,7 +70,9 @@ export default function ParkingsPage() {
     let cancelled = false;
     setLoadingParking(true);
     setError("");
-    fetch(`/api/parking/nearby?lat=${destination.lat}&lng=${destination.lng}&radius=${filters.radiusMeters}`)
+    fetch(
+      `/api/parking/nearby?lat=${destination.lat}&lng=${destination.lng}&radius=${filters.radiusMeters}&name=${encodeURIComponent(destName)}`,
+    )
       .then((response) => response.json())
       .then((data: { parking?: Parking[]; error?: string }) => {
         if (cancelled) return;
@@ -96,7 +99,7 @@ export default function ParkingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [destination, filters.radiusMeters]);
+  }, [destination, destName, filters.radiusMeters]);
 
   async function locate() {
     setLocating(true);
@@ -175,6 +178,11 @@ export default function ParkingsPage() {
   });
   const selected = visibleParking.find((lot) => lot.id === selectedId) ?? visibleParking[0] ?? null;
   const filterCount = activeFilterCount(filters);
+  const { drive, walk } = useRoutePreview(
+    origin,
+    selected ? { lat: selected.lat, lng: selected.lng } : null,
+    destination,
+  );
 
   return (
     <UserShell current="parkings">
@@ -201,16 +209,20 @@ export default function ParkingsPage() {
 
       {destination && (
         <>
-          <section className="mx-5 mt-4 h-56 overflow-hidden rounded-[4px] border border-line">
-            <MapView
-              origin={origin}
-              destination={destination}
-              parking={visibleParking}
-              selectedParkingId={selected?.id ?? null}
-              onSelectParking={selectParking}
-            />
-          </section>
-          <section className="px-5 pt-4">
+          <div className="sticky top-0 z-20 bg-paper px-5 pb-3 pt-4">
+            <section className="h-56 overflow-hidden rounded-[4px] border border-line bg-white shadow-sm">
+              <MapView
+                origin={origin}
+                destination={destination}
+                parking={visibleParking}
+                selectedParkingId={selected?.id ?? null}
+                onSelectParking={selectParking}
+                route={drive}
+                walk={walk}
+              />
+            </section>
+          </div>
+          <section className="px-5 pt-1">
             <div className="mb-4 flex items-end justify-between gap-3">
               <div>
                 <p className="text-xs uppercase tracking-[0.16em] text-ink-soft">Going to</p>
@@ -254,7 +266,7 @@ export default function ParkingsPage() {
                     </button>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <Link
-                        href={parkingHref(lot, destination, destName)}
+                        href={parkingHref(lot, destination, destName, origin)}
                         className="inline-flex items-center gap-0.5 text-sm text-accent underline-offset-4 hover:underline"
                       >
                         Details
@@ -263,9 +275,13 @@ export default function ParkingsPage() {
                       <AvailabilityBadge state={lot.availabilityState} />
                     </div>
                   </div>
-                  {(priceTag(lot.priceText) || lot.curated) && (
+                  {(priceTag(lot.priceText) || lot.curated || isOnsiteParking(lot)) && (
                     <div className="mt-3">
-                      <LotTags priceText={lot.priceText} verified={lot.curated} />
+                      <LotTags
+                        priceText={lot.priceText}
+                        verified={lot.curated}
+                        onsite={isOnsiteParking(lot)}
+                      />
                     </div>
                   )}
                 </article>
@@ -298,7 +314,12 @@ async function fetchDetails(id: string, query?: string) {
   return data.place ?? null;
 }
 
-function parkingHref(lot: Parking, destination: Coordinates, destName: string) {
+function parkingHref(
+  lot: Parking,
+  destination: Coordinates,
+  destName: string,
+  origin?: Coordinates | null,
+) {
   const params = new URLSearchParams({
     destLat: String(destination.lat),
     destLng: String(destination.lng),
@@ -307,6 +328,10 @@ function parkingHref(lot: Parking, destination: Coordinates, destName: string) {
     lng: String(lot.lng),
     name: lot.name,
   });
+  if (origin) {
+    params.set("originLat", String(origin.lat));
+    params.set("originLng", String(origin.lng));
+  }
   if (lot.address) params.set("address", lot.address);
   if (lot.priceText) params.set("priceText", lot.priceText);
   if (lot.hoursText) params.set("hoursText", lot.hoursText);

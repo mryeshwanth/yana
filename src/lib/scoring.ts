@@ -1,6 +1,8 @@
 import type { AnnotatedRoute, ComparedRoute, RawRoute, RoadMix, RouteTag } from "./types";
 import { ROUTE_TAG_LABELS } from "./types";
 
+const FAMILY_MAX_EXTRA_MIN = 8;
+
 export function annotateRoute(route: RawRoute, mix: RoadMix): AnnotatedRoute {
   return { ...route, ...mix };
 }
@@ -12,7 +14,7 @@ export function compareRoutes(routes: AnnotatedRoute[]): ComparedRoute[] {
   const fastest = [...unique].sort((a, b) => a.durationSeconds - b.durationSeconds)[0];
   const mixKnown = unique.some((route) => route.majorShare > 0 || route.narrowShare > 0);
   const broader = mixKnown ? pickBroader(unique) : null;
-  const family = mixKnown ? pickFamily(unique, unique.length > 1 ? fastest.id : undefined) : null;
+  const family = mixKnown ? pickFamily(unique, fastest) : null;
 
   return unique
     .sort((a, b) => a.durationSeconds - b.durationSeconds)
@@ -74,26 +76,26 @@ function pickBroader(routes: AnnotatedRoute[]) {
 }
 
 function familyScore(route: AnnotatedRoute) {
-  return route.narrowShare * 2 + route.narrowSegmentCount * 0.04;
+  return route.narrowShare * route.distanceMeters + route.narrowSegmentCount * 80;
 }
 
-function pickFamily(routes: AnnotatedRoute[], avoidId?: string) {
+function pickFamily(routes: AnnotatedRoute[], fastest: AnnotatedRoute) {
   const ranked = [...routes].sort((a, b) => {
     const delta = familyScore(a) - familyScore(b);
-    if (Math.abs(delta) > 0.06) return delta;
-    if (avoidId) {
-      if (a.id === avoidId) return 1;
-      if (b.id === avoidId) return -1;
-    }
+    if (Math.abs(delta) > 250) return delta;
+    if (a.narrowShare !== b.narrowShare) return a.narrowShare - b.narrowShare;
     return a.durationSeconds - b.durationSeconds;
   });
-  const best = ranked[0];
-  if (!best) return null;
-  if (!avoidId || best.id !== avoidId) return best;
+  const candidate = ranked[0];
+  if (!candidate) return null;
+  if (candidate.id === fastest.id) return fastest;
 
-  const next = ranked.find((route) => route.id !== avoidId);
-  if (next && familyScore(next) <= familyScore(best) + 0.15) return next;
-  return best;
+  const extraMin = (candidate.durationSeconds - fastest.durationSeconds) / 60;
+  const lessInner =
+    fastest.narrowShare - candidate.narrowShare >= 0.08 ||
+    familyScore(fastest) - familyScore(candidate) >= 400;
+  if (extraMin <= FAMILY_MAX_EXTRA_MIN && lessInner) return candidate;
+  return fastest;
 }
 
 function profileFor(route: AnnotatedRoute) {
@@ -107,6 +109,11 @@ function profileFor(route: AnnotatedRoute) {
 function explanationFor(route: AnnotatedRoute, tags: RouteTag[], extraMinutes: number) {
   const mixUnknown = route.majorShare === 0 && route.narrowShare === 0;
   const majorPct = Math.round(route.majorShare * 100);
+
+  if (tags.includes("family_comfort") && !tags.includes("fastest") && extraMinutes > 0) {
+    return `Fewer inner stretches, adds ${extraMinutes} min.`;
+  }
+
   const mix = mixUnknown
     ? ""
     : route.majorShare >= 0.55
@@ -116,6 +123,9 @@ function explanationFor(route: AnnotatedRoute, tags: RouteTag[], extraMinutes: n
         : `a mixed road split (${majorPct}% major)`;
 
   if (tags.includes("fastest")) {
+    if (tags.includes("family_comfort") && mix) {
+      return `Shortest drive, fewer inner stretches, ${mix}.`;
+    }
     return mix ? `Shortest drive, ${mix}.` : "Shortest drive time.";
   }
   if (extraMinutes > 0) {

@@ -6,13 +6,14 @@ export async function GET(request: Request) {
   const lat = Number(searchParams.get("lat"));
   const lng = Number(searchParams.get("lng"));
   const radius = Number(searchParams.get("radius") ?? 1000);
+  const name = searchParams.get("name")?.trim() ?? "";
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return NextResponse.json({ error: "lat and lng are required" }, { status: 400 });
   }
 
   try {
-    const parking = await searchNearbyParking({ lat, lng }, radius);
+    const parking = await searchNearbyParking({ lat, lng }, radius, name);
     return NextResponse.json({ parking });
   } catch (error) {
     return NextResponse.json(

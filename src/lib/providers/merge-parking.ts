@@ -15,29 +15,38 @@ const osm = new OsmParkingProvider();
 export async function searchNearbyParking(
   destination: Coordinates,
   radiusMeters = 1000,
+  destName = "",
 ): Promise<Parking[]> {
-  const cacheKey = `nearby:v3:${destination.lat.toFixed(3)}:${destination.lng.toFixed(3)}:${radiusMeters}`;
+  const cacheKey = `nearby:v4:${destination.lat.toFixed(3)}:${destination.lng.toFixed(3)}:${radiusMeters}:${destName.toLowerCase().slice(0, 24)}`;
   const cached = await readCache<Parking[]>(cacheKey);
   const catalog = await curated.searchNearby(destination.lat, destination.lng, radiusMeters + 200);
+  const onsite = destName ? [onsiteLot(destination, destName)] : [];
 
   if (cached?.length) {
     const remote = cached.filter((lot) => !lot.curated && !lot.id.startsWith("curated:"));
-    return rankParking(destination, radiusMeters, [...catalog, ...remote]);
+    return rankParking(destination, radiusMeters, [...catalog, ...onsite, ...remote]);
   }
 
   const results = await Promise.allSettled([
     hasGoogleServer()
       ? places.searchNearby(destination.lat, destination.lng, radiusMeters)
       : Promise.resolve([] as ParkingCandidate[]),
+    destName && hasGoogleServer()
+      ? places.searchByQuery(`${destName} parking`, destination.lat, destination.lng, radiusMeters)
+      : Promise.resolve([] as ParkingCandidate[]),
     osm.searchNearby(destination.lat, destination.lng, radiusMeters),
   ]);
 
   const buckets = results.map((result) => (result.status === "fulfilled" ? result.value : []));
-  const googleLots = buckets[0] ?? [];
+  const googleLots = [...(buckets[0] ?? []), ...(buckets[1] ?? [])];
   if (googleLots.length > 0) {
     await upsertGoogleParking(googleLots).catch(() => undefined);
   }
-  const parking = rankParking(destination, radiusMeters, [...catalog, ...buckets.flat()]);
+  const parking = rankParking(destination, radiusMeters, [
+    ...catalog,
+    ...onsite,
+    ...buckets.flat(),
+  ]);
 
   if (parking.length > 0) {
     await writeCache(cacheKey, parking, CACHE_TTL.nearby);
@@ -66,8 +75,26 @@ function rankParking(
       };
     })
     .filter((item): item is Parking => Boolean(item))
-    .sort((a, b) => a.distanceMeters - b.distanceMeters)
+    .sort((a, b) => {
+      const aOnsite = a.id.startsWith("onsite:") ? 0 : 1;
+      const bOnsite = b.id.startsWith("onsite:") ? 0 : 1;
+      if (aOnsite !== bOnsite) return aOnsite - bOnsite;
+      return a.distanceMeters - b.distanceMeters;
+    })
     .slice(0, 20);
+}
+
+function onsiteLot(destination: Coordinates, destName: string): ParkingCandidate {
+  return {
+    id: `onsite:${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`,
+    name: `${destName} parking`,
+    lat: destination.lat,
+    lng: destination.lng,
+    notes: "On-site at the destination",
+    availabilityState: "unknown",
+    source: "places",
+    curated: false,
+  };
 }
 
 export function mergeCandidates(candidates: ParkingCandidate[]): ParkingCandidate[] {
@@ -81,7 +108,7 @@ export function mergeCandidates(candidates: ParkingCandidate[]): ParkingCandidat
       kept.push(candidate);
       continue;
     }
-    if (duplicate.curated) {
+    if (duplicate.curated || duplicate.id.startsWith("onsite:")) {
       duplicate.priceText = duplicate.priceText ?? candidate.priceText;
       duplicate.hoursText = duplicate.hoursText ?? candidate.hoursText;
       duplicate.address = duplicate.address ?? candidate.address;

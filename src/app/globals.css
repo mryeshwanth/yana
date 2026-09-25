@@ -71,17 +71,18 @@ button {
 }
 
 .map-marker.origin {
-  background: #1c1917;
-}
-
-.map-marker.destination {
-  width: 18px;
-  height: 18px;
   background: #f97316;
 }
 
+.map-marker.destination {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  background: #1c1917;
+}
+
 .map-marker.parking {
-  background: #3f5d48;
+  background: #a8a29e;
 }
 
 .map-marker.parking.selected {

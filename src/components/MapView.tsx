@@ -4,14 +4,14 @@ import { useEffect, useRef } from "react";
 import * as maplibregl from "maplibre-gl";
 import type { MapMouseEvent } from "maplibre-gl";
 import { GoogleMapView } from "@/components/GoogleMapView";
-import type { ComparedRoute, Coordinates, Parking, WalkLeg } from "@/lib/types";
+import type { Coordinates, Parking, WalkLeg } from "@/lib/types";
 
 type MapViewProps = {
   origin?: Coordinates | null;
   destination?: Coordinates | null;
   parking?: Parking[];
   selectedParkingId?: string | null;
-  route?: ComparedRoute | null;
+  route?: { coordinates: Coordinates[] } | null;
   walk?: WalkLeg | null;
   onSelectParking?: (id: string) => void;
   onMapClick?: (point: Coordinates) => void;
@@ -149,7 +149,7 @@ function OsmMapView({
 
     const draw = () => {
       setLine(map, SOURCE_ROUTE, route?.coordinates ?? [], "#f97316", 5);
-      setLine(map, SOURCE_WALK, walk?.coordinates ?? [], "#3f5d48", 3, true);
+      setLine(map, SOURCE_WALK, walk?.coordinates ?? [], "#1c1917", 3, true);
     };
 
     if (map.isStyleLoaded()) draw();

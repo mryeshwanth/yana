@@ -8,6 +8,7 @@ import { MapView } from "@/components/MapView";
 import { UserShell } from "@/components/UserShell";
 import { formatDistance, formatMinutes } from "@/lib/format";
 import { appleMapsDriveUrl, googleMapsDriveUrl } from "@/lib/maps-links";
+import { queuePendingReview } from "@/lib/reviews";
 import { readPreference } from "@/lib/preferences";
 import { EMPTY_TRIP, readTrip, subscribeTrip } from "@/lib/trip-store";
 import { ROUTE_TAG_LABELS } from "@/lib/types";
@@ -72,6 +73,16 @@ export default function RoadsPage() {
   const chosen = routes.find((route) => route.id === chosenId) ?? routes[0] ?? null;
   const destination = trip.destination;
   const origin = trip.origin;
+
+  function rememberMapsHandoff() {
+    if (!selected || !destination) return;
+    queuePendingReview({
+      lotId: selected.id,
+      lotName: selected.name,
+      destName: trip.destName,
+      destination,
+    });
+  }
 
   const header = (
     <header className="flex items-center justify-between px-5 pt-6">
@@ -181,6 +192,7 @@ export default function RoadsPage() {
                     href={googleMapsDriveUrl(origin, parking, destination, route.coordinates)}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={() => rememberMapsHandoff()}
                   >
                     Use Google Maps
                   </a>
@@ -189,6 +201,7 @@ export default function RoadsPage() {
                     href={appleMapsDriveUrl(origin, parking, destination, route.coordinates)}
                     target="_blank"
                     rel="noreferrer"
+                    onClick={() => rememberMapsHandoff()}
                   >
                     Use Apple Maps
                   </a>

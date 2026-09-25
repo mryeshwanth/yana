@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { ComparedRoute, Coordinates, Parking, WalkLeg } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import type { Coordinates, Parking, WalkLeg } from "@/lib/types";
 
 type Props = {
   apiKey: string;
@@ -9,7 +9,7 @@ type Props = {
   destination?: Coordinates | null;
   parking?: Parking[];
   selectedParkingId?: string | null;
-  route?: ComparedRoute | null;
+  route?: { coordinates: Coordinates[] } | null;
   walk?: WalkLeg | null;
   onSelectParking?: (id: string) => void;
   onMapClick?: (point: Coordinates) => void;
@@ -39,6 +39,7 @@ export function GoogleMapView({
   const overlaysRef = useRef<google.maps.MVCObject[]>([]);
   const onSelectRef = useRef(onSelectParking);
   const onClickRef = useRef(onMapClick);
+  const [ready, setReady] = useState(false);
   onSelectRef.current = onSelectParking;
   onClickRef.current = onMapClick;
 
@@ -61,6 +62,7 @@ export function GoogleMapView({
         }
       });
       mapRef.current = map;
+      setReady(true);
     });
     return () => {
       cancelled = true;
@@ -77,29 +79,35 @@ export function GoogleMapView({
     });
     overlaysRef.current = [];
 
-    const addMarker = (point: Coordinates, color: string, id?: string) => {
+    const addMarker = (
+      point: Coordinates,
+      color: string,
+      options?: { id?: string; square?: boolean },
+    ) => {
+      const selected = Boolean(options?.id && options.id === selectedParkingId);
       const marker = new maps.Marker({
         map,
         position: point,
         icon: {
-          path: maps.SymbolPath.CIRCLE,
-          scale: id && id === selectedParkingId ? 9 : 7,
+          path: options?.square ? "M -1,-1 L 1,-1 L 1,1 L -1,1 Z" : maps.SymbolPath.CIRCLE,
+          scale: options?.square ? 8 : selected ? 9 : 7,
           fillColor: color,
           fillOpacity: 1,
           strokeColor: "#ffffff",
           strokeWeight: 2,
         },
       });
-      if (id) {
-        marker.addListener("click", () => onSelectRef.current?.(id));
+      const lotId = options?.id;
+      if (lotId) {
+        marker.addListener("click", () => onSelectRef.current?.(lotId));
       }
       overlaysRef.current.push(marker);
     };
 
-    if (origin) addMarker(origin, "#211c16");
-    if (destination) addMarker(destination, "#f97316");
+    if (origin) addMarker(origin, "#f97316");
+    if (destination) addMarker(destination, "#1c1917", { square: true });
     for (const lot of parking) {
-      addMarker(lot, lot.id === selectedParkingId ? "#f97316" : "#3f5d48", lot.id);
+      addMarker(lot, lot.id === selectedParkingId ? "#f97316" : "#a8a29e", { id: lot.id });
     }
     if (interactivePin) {
       const marker = new maps.Marker({
@@ -141,7 +149,7 @@ export function GoogleMapView({
       const line = new maps.Polyline({
         map,
         path: walk.coordinates,
-        strokeColor: "#3f5d48",
+        strokeColor: "#1c1917",
         strokeWeight: 3,
         strokeOpacity: 0.85,
         icons: [{ icon: { path: "M 0,-1 0,1", strokeOpacity: 1, scale: 3 }, offset: "0", repeat: "12px" }],
@@ -155,6 +163,7 @@ export function GoogleMapView({
       interactivePin,
       ...parking.map((lot) => ({ lat: lot.lat, lng: lot.lng })),
       ...(route?.coordinates ?? []),
+      ...(walk?.coordinates ?? []),
     ].filter((point): point is Coordinates => Boolean(point));
 
     if (followPin && focus.length === 1) {
@@ -165,7 +174,7 @@ export function GoogleMapView({
       focus.forEach((point) => bounds.extend(point));
       map.fitBounds(bounds, 56);
     }
-  }, [origin, destination, parking, selectedParkingId, route, walk, interactivePin, pinDraggable, followPin]);
+  }, [ready, origin, destination, parking, selectedParkingId, route, walk, interactivePin, pinDraggable, followPin]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { Crosshair, MapPin } from "@phosphor-icons/react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Coordinates, PlaceSuggestion } from "@/lib/types";
 
 type SearchCardProps = {
@@ -25,8 +25,15 @@ export function SearchCard({
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [loading, setLoading] = useState(false);
+  const skipFetch = useRef(false);
 
   useEffect(() => {
+    if (skipFetch.current) {
+      skipFetch.current = false;
+      setSuggestions([]);
+      setLoading(false);
+      return;
+    }
     if (query.trim().length < 2) {
       setSuggestions([]);
       return;
@@ -58,8 +65,10 @@ export function SearchCard({
   }, [query, proximity]);
 
   function choose(suggestion: PlaceSuggestion) {
+    skipFetch.current = true;
     setQuery(suggestion.label);
     setSuggestions([]);
+    setLoading(false);
     onSelectPlace(suggestion);
   }
 
@@ -72,7 +81,10 @@ export function SearchCard({
         <input
           id={listId}
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => {
+            skipFetch.current = false;
+            setQuery(event.target.value);
+          }}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();

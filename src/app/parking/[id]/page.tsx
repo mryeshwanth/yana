@@ -1,11 +1,13 @@
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
 import { LotTags } from "@/components/LotTags";
 import { BrandMark } from "@/components/BrandMark";
+import { ParkingMap } from "@/components/ParkingMap";
 import { UseParkingActions } from "@/components/UseParkingActions";
 import { formatDistance, formatMinutes } from "@/lib/format";
+import { isOnsiteParking } from "@/lib/lot-tags";
 import { estimateWalk } from "@/lib/geo";
 import { getCuratedLot } from "@/lib/providers/curated-parking";
-import type { AvailabilityState, AvailabilitySource } from "@/lib/types";
+import type { AvailabilityState, AvailabilitySource, Parking } from "@/lib/types";
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -17,6 +19,7 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
   const query = await searchParams;
   const decoded = decodeURIComponent(id);
   const dest = numberPair(query.destLat, query.destLng);
+  const origin = numberPair(query.originLat, query.originLng);
 
   let lot = {
     id: decoded,
@@ -54,68 +57,90 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
     };
   }
 
-  const walk = dest && Number.isFinite(lot.lat) ? estimateWalk(dest, { lat: lot.lat, lng: lot.lng }) : null;
+  const walkEstimate =
+    dest && Number.isFinite(lot.lat) && Number.isFinite(lot.lng)
+      ? estimateWalk(dest, { lat: lot.lat, lng: lot.lng })
+      : null;
+  const parking: Parking = {
+    id: lot.id,
+    name: lot.name,
+    lat: lot.lat,
+    lng: lot.lng,
+    address: lot.address,
+    distanceMeters: walkEstimate?.walkingDistanceMeters ?? 0,
+    walkingTimeSeconds: walkEstimate?.walkingTimeSeconds ?? 0,
+    walkingDistanceMeters: walkEstimate?.walkingDistanceMeters ?? 0,
+    priceText: lot.priceText,
+    hoursText: lot.hoursText,
+    notes: lot.notes,
+    availabilityState: lot.availabilityState,
+    source: lot.source,
+    curated: lot.curated,
+  };
+  const hasMap = Number.isFinite(lot.lat) && Number.isFinite(lot.lng);
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-xl px-5 py-8">
       <header className="flex items-center justify-between">
         <BrandMark compact />
       </header>
-      <p className="mt-12 text-xs uppercase tracking-[0.18em] text-ink-soft">Parking</p>
-      <h1 className="mt-2 text-3xl font-semibold">{lot.name}</h1>
-      <div className="mt-4 flex flex-wrap items-center gap-2">
-        <AvailabilityBadge state={lot.availabilityState} />
-        <LotTags priceText={lot.priceText} verified={lot.curated} />
-      </div>
-      <dl className="mt-8 space-y-4 rounded-[4px] border border-line bg-white p-5">
-        {lot.address && (
+      {hasMap && (
+        <section className="mt-8 h-52 overflow-hidden rounded-[4px] border border-line">
+          <ParkingMap origin={origin} destination={dest} parking={parking} />
+        </section>
+      )}
+      <section className={`${hasMap ? "mt-4" : "mt-8"} rounded-[4px] border border-line bg-white p-5`}>
+        <dl className="space-y-4">
           <div>
-            <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Address</dt>
-            <dd className="mt-1">{lot.address}</dd>
-          </div>
-        )}
-        {walk && (
-          <div>
-            <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Walk to destination</dt>
+            <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Parking</dt>
             <dd className="mt-1">
-              {formatMinutes(walk.walkingTimeSeconds)} · {formatDistance(walk.walkingDistanceMeters)}
+              <h1 className="text-base font-normal">{lot.name}</h1>
             </dd>
+            {(lot.availabilityState !== "unknown" || lot.priceText || lot.curated || isOnsiteParking(lot)) && (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <AvailabilityBadge state={lot.availabilityState} />
+                <LotTags
+                  priceText={lot.priceText}
+                  verified={lot.curated}
+                  onsite={isOnsiteParking(lot)}
+                />
+              </div>
+            )}
           </div>
-        )}
-        <div>
-          <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Price</dt>
-          <dd className="mt-1">{lot.priceText || "Not listed"}</dd>
-        </div>
-        <div>
-          <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Hours</dt>
-          <dd className="mt-1">{lot.hoursText || "Not listed"}</dd>
-        </div>
-        {lot.notes && (
+          {lot.address && (
+            <div>
+              <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Address</dt>
+              <dd className="mt-1">{lot.address}</dd>
+            </div>
+          )}
+          {walkEstimate && (
+            <div>
+              <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Walk to destination</dt>
+              <dd className="mt-1">
+                {formatMinutes(walkEstimate.walkingTimeSeconds)} · {formatDistance(walkEstimate.walkingDistanceMeters)}
+              </dd>
+            </div>
+          )}
           <div>
-            <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Notes</dt>
-            <dd className="mt-1 leading-6">{lot.notes}</dd>
+            <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Price</dt>
+            <dd className="mt-1">{lot.priceText || "Not listed"}</dd>
           </div>
-        )}
-      </dl>
+          <div>
+            <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Hours</dt>
+            <dd className="mt-1">{lot.hoursText || "Not listed"}</dd>
+          </div>
+          {lot.notes && (
+            <div>
+              <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Notes</dt>
+              <dd className="mt-1 leading-6">{lot.notes}</dd>
+            </div>
+          )}
+        </dl>
+      </section>
       <UseParkingActions
         destination={dest}
         destName={first(query.destName) ?? ""}
-        parking={{
-          id: lot.id,
-          name: lot.name,
-          lat: lot.lat,
-          lng: lot.lng,
-          address: lot.address,
-          distanceMeters: walk?.walkingDistanceMeters ?? 0,
-          walkingTimeSeconds: walk?.walkingTimeSeconds ?? 0,
-          walkingDistanceMeters: walk?.walkingDistanceMeters ?? 0,
-          priceText: lot.priceText,
-          hoursText: lot.hoursText,
-          notes: lot.notes,
-          availabilityState: lot.availabilityState,
-          source: lot.source,
-          curated: lot.curated,
-        }}
+        parking={parking}
       />
     </main>
   );
