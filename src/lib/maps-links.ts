@@ -45,13 +45,13 @@ export function appleMapsDriveUrl(
   destination: Coordinates,
   path: Coordinates[] = [],
 ) {
-  const stops = [...viaPointsAlong(path), parking, destination]
-    .map((point) => `${point.lat},${point.lng}`)
-    .join(" to:");
   const params = new URLSearchParams({
-    saddr: `${origin.lat},${origin.lng}`,
-    daddr: stops,
-    dirflg: "d",
+    source: `${origin.lat},${origin.lng}`,
+    destination: `${destination.lat},${destination.lng}`,
+    mode: "driving",
   });
-  return `https://maps.apple.com/?${params.toString()}`;
+  for (const point of [...viaPointsAlong(path), parking]) {
+    params.append("waypoint", `${point.lat},${point.lng}`);
+  }
+  return `https://maps.apple.com/directions?${params.toString()}`;
 }

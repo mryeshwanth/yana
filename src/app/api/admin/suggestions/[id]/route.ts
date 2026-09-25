@@ -37,6 +37,7 @@ export async function POST(request: Request, { params }: Params) {
         priceText: suggestion.priceText,
         hoursText: suggestion.hoursText,
         notes: suggestion.notes,
+        lotKind: suggestion.lotKind,
         source: "operator",
         availabilityState: "unknown",
       },

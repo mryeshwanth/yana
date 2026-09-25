@@ -1,21 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { CaretLeft } from "@phosphor-icons/react";
+import { CaretLeft, Crosshair } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
+import { LotDetailsFields } from "@/components/LotDetailsFields";
 import { MapView } from "@/components/MapView";
 import { BANGALORE_CENTER } from "@/lib/constants";
+import { EMPTY_LOT_FORM, formatOperatingHours, formatPrice, type LotFormState } from "@/lib/lot-form";
+import { requestLocation } from "@/lib/location";
 import { readTrip } from "@/lib/trip-store";
 import type { Coordinates } from "@/lib/types";
 
 export default function SuggestPage() {
   const [pin, setPin] = useState<Coordinates>(BANGALORE_CENTER);
-  const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
-  const [priceText, setPriceText] = useState("");
-  const [hoursText, setHoursText] = useState("");
-  const [notes, setNotes] = useState("");
+  const [followPin, setFollowPin] = useState(false);
+  const [locating, setLocating] = useState(false);
+  const [locationNote, setLocationNote] = useState("Tap the map or drag the pin to set the lot.");
+  const [form, setForm] = useState<LotFormState>(EMPTY_LOT_FORM);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -24,12 +26,29 @@ export default function SuggestPage() {
     const lat = Number(params.get("lat"));
     const lng = Number(params.get("lng"));
     if (Number.isFinite(lat) && Number.isFinite(lng)) {
-      setPin({ lat, lng });
+      movePin({ lat, lng });
       return;
     }
     const trip = readTrip();
-    if (trip.destination) setPin(trip.destination);
+    if (trip.destination) movePin(trip.destination);
   }, []);
+
+  function movePin(point: Coordinates, follow = false) {
+    setFollowPin(follow);
+    setPin(point);
+    setLocationNote("Tap the map or drag the pin to set the lot.");
+  }
+
+  async function locate() {
+    setLocating(true);
+    const result = await requestLocation();
+    setLocating(false);
+    if (!result.ok) {
+      setLocationNote(result.message);
+      return;
+    }
+    movePin({ lat: result.lat, lng: result.lng }, true);
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -39,13 +58,13 @@ export default function SuggestPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name,
+        name: form.name,
         lat: pin.lat,
         lng: pin.lng,
-        address: address || undefined,
-        priceText: priceText || undefined,
-        hoursText: hoursText || undefined,
-        notes: notes || undefined,
+        lotKind: form.lotKind || undefined,
+        priceText: formatPrice(form.priceKind, form.priceAmount, form.priceUnit),
+        hoursText: formatOperatingHours(form.opensAt, form.closesAt) ?? undefined,
+        notes: form.notes || undefined,
       }),
     });
     setSaving(false);
@@ -54,8 +73,7 @@ export default function SuggestPage() {
       return;
     }
     setStatus("Sent. Yana will review it before it appears in search.");
-    setName("");
-    setNotes("");
+    setForm(EMPTY_LOT_FORM);
   }
 
   return (
@@ -69,29 +87,27 @@ export default function SuggestPage() {
       </header>
       <h1 className="mt-8 text-3xl font-semibold">Suggest parking</h1>
       <p className="mt-3 text-ink-soft">
-        Tap the map to drop a pin at the entrance. Suggestions stay hidden until they are approved.
+        Tap the map or drag the pin to the entrance. Suggestions stay hidden until they are approved.
       </p>
-      <div className="mt-6 h-64 overflow-hidden rounded-[4px] border border-line">
-        <MapView interactivePin={pin} onMapClick={setPin} />
+      <div className="relative mt-6 h-80 overflow-hidden rounded-[4px] border border-line">
+        <MapView
+          interactivePin={pin}
+          onMapClick={(point) => movePin(point)}
+          pinDraggable
+          followPin={followPin}
+        />
+        <button
+          type="button"
+          onClick={() => void locate()}
+          aria-label="Use current location"
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-[4px] border border-line bg-white text-ink shadow-sm"
+        >
+          <Crosshair size={22} weight={locating ? "bold" : "regular"} />
+        </button>
       </div>
-      <form onSubmit={submit} className="mt-6 grid gap-4">
-        <Field label="Name" value={name} onChange={setName} required />
-        <Field label="Address" value={address} onChange={setAddress} />
-        <div className="grid gap-4 grid-cols-2">
-          <Field label="Price" value={priceText} onChange={setPriceText} placeholder="₹40/hour" />
-          <Field label="Hours" value={hoursText} onChange={setHoursText} placeholder="8:00–22:00" />
-        </div>
-        <label className="grid gap-2 text-sm">
-          Notes
-          <textarea
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-            className="min-h-24 rounded-[4px] border border-line bg-white px-4 py-3"
-          />
-        </label>
-        <p className="text-xs text-ink-soft">
-          Pin: {pin.lat.toFixed(5)}, {pin.lng.toFixed(5)}
-        </p>
+      <p className="mt-2 text-xs text-ink-soft">{locationNote}</p>
+      <form onSubmit={submit} className="mt-6 grid gap-3 rounded-[4px] border border-line bg-white p-5">
+        <LotDetailsFields value={form} onChange={setForm} />
         <button
           type="submit"
           disabled={saving}
@@ -102,32 +118,5 @@ export default function SuggestPage() {
         {status && <p className="text-sm text-moss">{status}</p>}
       </form>
     </main>
-  );
-}
-
-function Field({
-  label,
-  value,
-  onChange,
-  required,
-  placeholder,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  required?: boolean;
-  placeholder?: string;
-}) {
-  return (
-    <label className="grid gap-2 text-sm">
-      {label}
-      <input
-        value={value}
-        required={required}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="rounded-[4px] border border-line bg-white px-4 py-3"
-      />
-    </label>
   );
 }

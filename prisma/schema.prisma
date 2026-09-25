@@ -26,6 +26,17 @@ enum SuggestionStatus {
   rejected
 }
 
+enum ReviewThumb {
+  up
+  down
+}
+
+enum ReviewReason {
+  close_enough
+  too_far
+  used_other
+}
+
 model ParkingLot {
   id                String             @id @default(cuid())
   name              String
@@ -71,6 +82,7 @@ model ParkingSuggestion {
   priceText  String?
   hoursText  String?
   notes      String?
+  lotKind    String?
   status     SuggestionStatus @default(pending)
   createdAt  DateTime         @default(now())
   reviewedAt DateTime?
@@ -82,4 +94,21 @@ model ParkingCache {
   payload   Json
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+model ParkingReview {
+  id        String       @id @default(cuid())
+  lotId     String
+  lotName   String
+  lotLat    Float?
+  lotLng    Float?
+  destName  String
+  destLat   Float?
+  destLng   Float?
+  thumb     ReviewThumb
+  reason    ReviewReason
+  createdAt DateTime     @default(now())
+
+  @@index([lotId, createdAt])
+  @@index([thumb])
 }

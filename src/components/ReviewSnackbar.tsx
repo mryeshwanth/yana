@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import {
   dismissPendingReview,
+  postReview,
   readyPendingReview,
   saveReview,
   suggestParkingHref,
@@ -46,7 +47,12 @@ export function ReviewSnackbar() {
 
   function answer(reason: ReviewReason) {
     if (!pending) return;
-    saveReview({ pending, thumb: step === "down" ? "down" : "up", reason });
+    const review = saveReview({
+      pending,
+      thumb: step === "down" ? "down" : "up",
+      reason,
+    });
+    void postReview(review).catch(() => undefined);
     if (reason === "used_other") {
       if (pending.destLat != null && pending.destLng != null) {
         writeTrip({
@@ -63,8 +69,8 @@ export function ReviewSnackbar() {
   const dest = pending.destName.trim() || "this destination";
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))]">
-      <div className="pointer-events-auto mx-auto max-w-lg">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 pb-[calc(4.75rem+env(safe-area-inset-bottom))]">
+      <div className="pointer-events-auto mx-auto max-w-lg px-5">
         <div className="relative rounded-[4px] border border-line bg-white p-4 shadow-[0_8px_24px_rgba(28,25,23,0.12)]">
           <button
             type="button"
@@ -76,7 +82,7 @@ export function ReviewSnackbar() {
           </button>
           {step === "ask" ? (
             <>
-              <p className="pr-6 text-sm font-medium text-accent">
+              <p className="pr-6 text-sm font-medium text-ink">
                 Did {pending.lotName} work for {dest}?
               </p>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -86,7 +92,7 @@ export function ReviewSnackbar() {
                   className="inline-flex items-center justify-center gap-1.5 rounded-[4px] border border-line bg-white px-3 py-2.5 text-sm font-medium"
                 >
                   <ThumbsUp size={16} />
-                  useful
+                  Useful
                 </button>
                 <button
                   type="button"
@@ -94,7 +100,7 @@ export function ReviewSnackbar() {
                   className="inline-flex items-center justify-center gap-1.5 rounded-[4px] border border-line bg-white px-3 py-2.5 text-sm font-medium"
                 >
                   <ThumbsDown size={16} />
-                  not useful
+                  Not useful
                 </button>
               </div>
             </>

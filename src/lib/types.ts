@@ -44,6 +44,8 @@ export type Parking = {
   availabilityState: AvailabilityState;
   source: AvailabilitySource;
   curated: boolean;
+  usefulCount?: number;
+  reviewCount?: number;
 };
 
 export type RawRoute = {

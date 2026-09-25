@@ -1,18 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { MapPin, Path, User } from "@phosphor-icons/react";
+import { ClockCounterClockwise, MapPin, Path, User } from "@phosphor-icons/react";
+
+export type NavTab = "parkings" | "recents" | "roads" | "profile";
 
 const TABS = [
   { href: "/", id: "parkings", label: "Parkings", Icon: MapPin },
+  { href: "/recents", id: "recents", label: "Recents", Icon: ClockCounterClockwise },
   { href: "/roads", id: "roads", label: "Roads", Icon: Path },
   { href: "/profile", id: "profile", label: "Profile", Icon: User },
 ] as const;
 
-export function BottomNav({ current }: { current: "parkings" | "roads" | "profile" }) {
+export function BottomNav({ current }: { current: NavTab }) {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white/95 backdrop-blur">
-      <ul className="mx-auto grid max-w-lg grid-cols-3 px-2 pb-[env(safe-area-inset-bottom)] pt-2">
+      <ul className="mx-auto grid max-w-lg grid-cols-4 px-2 pb-[env(safe-area-inset-bottom)] pt-2">
         {TABS.map((tab) => {
           const active = tab.id === current;
           return (

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { BottomNav } from "@/components/BottomNav";
+import { BottomNav, type NavTab } from "@/components/BottomNav";
 import { ReviewSnackbar } from "@/components/ReviewSnackbar";
 import { isOnboarded } from "@/lib/preferences";
 
@@ -10,7 +10,7 @@ export function UserShell({
   current,
   children,
 }: {
-  current: "parkings" | "roads" | "profile";
+  current: NavTab;
   children: React.ReactNode;
 }) {
   const router = useRouter();

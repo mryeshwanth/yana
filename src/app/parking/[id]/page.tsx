@@ -1,4 +1,5 @@
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
+import { LotRating } from "@/components/LotRating";
 import { LotTags } from "@/components/LotTags";
 import { BrandMark } from "@/components/BrandMark";
 import { ParkingMap } from "@/components/ParkingMap";
@@ -7,6 +8,7 @@ import { formatDistance, formatMinutes } from "@/lib/format";
 import { isOnsiteParking } from "@/lib/lot-tags";
 import { estimateWalk } from "@/lib/geo";
 import { getCuratedLot } from "@/lib/providers/curated-parking";
+import { getLotReviewScore } from "@/lib/review-scores";
 import type { AvailabilityState, AvailabilitySource, Parking } from "@/lib/types";
 
 type PageProps = {
@@ -78,6 +80,7 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
     curated: lot.curated,
   };
   const hasMap = Number.isFinite(lot.lat) && Number.isFinite(lot.lng);
+  const rating = await getLotReviewScore(lot.id);
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-xl px-5 py-8">
@@ -118,6 +121,14 @@ export default async function ParkingDetailPage({ params, searchParams }: PagePr
               <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Walk to destination</dt>
               <dd className="mt-1">
                 {formatMinutes(walkEstimate.walkingTimeSeconds)} · {formatDistance(walkEstimate.walkingDistanceMeters)}
+              </dd>
+            </div>
+          )}
+          {rating && (
+            <div>
+              <dt className="text-xs uppercase tracking-[0.16em] text-ink-soft">Feedback</dt>
+              <dd className="mt-1">
+                <LotRating usefulCount={rating.usefulCount} reviewCount={rating.reviewCount} />
               </dd>
             </div>
           )}

@@ -81,18 +81,13 @@ export default function RoadsPage() {
       lotName: selected.name,
       destName: trip.destName,
       destination,
+      parking: { lat: selected.lat, lng: selected.lng },
     });
   }
 
   const header = (
     <header className="flex items-center justify-between px-5 pt-6">
       <BrandMark compact />
-      <Link
-        href="/recents"
-        className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
-      >
-        Recent
-      </Link>
     </header>
   );
 

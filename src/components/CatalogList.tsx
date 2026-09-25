@@ -50,6 +50,9 @@ export function CatalogList({ lots }: { lots: Lot[] }) {
           <Link href="/agent" className="text-ink-soft underline-offset-4 hover:underline">
             Finder
           </Link>
+          <Link href="/agent/reviews" className="text-ink-soft underline-offset-4 hover:underline">
+            Reviews
+          </Link>
           <button type="button" onClick={logout} className="text-ink-soft underline-offset-4 hover:underline">
             Sign out
           </button>

@@ -14,6 +14,8 @@ export type ReviewReason = "close_enough" | "too_far" | "used_other";
 export type PendingReview = {
   lotId: string;
   lotName: string;
+  lotLat?: number;
+  lotLng?: number;
   destName: string;
   destLat?: number;
   destLng?: number;
@@ -23,6 +25,8 @@ export type PendingReview = {
 export type StoredReview = {
   lotId: string;
   lotName: string;
+  lotLat?: number;
+  lotLng?: number;
   destName: string;
   destLat?: number;
   destLng?: number;
@@ -36,6 +40,7 @@ export function queuePendingReview(input: {
   lotName: string;
   destName: string;
   destination?: Coordinates | null;
+  parking?: Coordinates | null;
 }) {
   if (typeof window === "undefined") return;
   if (wasAsked(input.lotId)) return;
@@ -45,6 +50,10 @@ export function queuePendingReview(input: {
     destName: input.destName,
     openedAt: Date.now(),
   };
+  if (input.parking) {
+    pending.lotLat = input.parking.lat;
+    pending.lotLng = input.parking.lng;
+  }
   if (input.destination) {
     pending.destLat = input.destination.lat;
     pending.destLng = input.destination.lng;
@@ -98,6 +107,8 @@ export function saveReview(input: {
   const review: StoredReview = {
     lotId: input.pending.lotId,
     lotName: input.pending.lotName,
+    lotLat: input.pending.lotLat,
+    lotLng: input.pending.lotLng,
     destName: input.pending.destName,
     destLat: input.pending.destLat,
     destLng: input.pending.destLng,
@@ -112,6 +123,26 @@ export function saveReview(input: {
   window.localStorage.setItem(REVIEWS_KEY, JSON.stringify(next));
   markAsked(review.lotId);
   clearPendingReview();
+  return review;
+}
+
+export function postReview(review: StoredReview) {
+  return fetch("/api/reviews", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    keepalive: true,
+    body: JSON.stringify({
+      lotId: review.lotId,
+      lotName: review.lotName,
+      lotLat: review.lotLat,
+      lotLng: review.lotLng,
+      destName: review.destName || "Destination",
+      destLat: review.destLat,
+      destLng: review.destLng,
+      thumb: review.thumb,
+      reason: review.reason,
+    }),
+  });
 }
 
 export function suggestParkingHref(pending: PendingReview) {

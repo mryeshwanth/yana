@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClockCounterClockwise } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
@@ -33,26 +32,18 @@ export default function RecentsPage() {
   }
 
   return (
-    <UserShell current="parkings">
+    <UserShell current="recents">
       <header className="flex items-center justify-between px-5 pt-6">
         <BrandMark compact />
-        <div className="flex items-center gap-3">
-          {recents.length > 0 && (
-            <button
-              type="button"
-              onClick={clearAll}
-              className="px-2 py-1.5 text-sm text-ink-soft"
-            >
-              Clear
-            </button>
-          )}
-          <Link
-            href="/"
-            className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
+        {recents.length > 0 && (
+          <button
+            type="button"
+            onClick={clearAll}
+            className="px-2 py-1.5 text-sm text-ink-soft"
           >
-            Back
-          </Link>
-        </div>
+            Clear
+          </button>
+        )}
       </header>
       <section className="px-5 pt-8">
         <h1 className="text-3xl font-semibold">Recents</h1>

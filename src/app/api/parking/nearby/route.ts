@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { searchNearbyParking } from "@/lib/providers/merge-parking";
+import { attachReviewScores } from "@/lib/review-scores";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const parking = await searchNearbyParking({ lat, lng }, radius, name);
+    const parking = await attachReviewScores(await searchNearbyParking({ lat, lng }, radius, name));
     return NextResponse.json({ parking });
   } catch (error) {
     return NextResponse.json(

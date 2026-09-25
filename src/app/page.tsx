@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CaretRight, Funnel, PlusCircle } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
+import { LotRating } from "@/components/LotRating";
 import { LotTags } from "@/components/LotTags";
 import { BrandMark } from "@/components/BrandMark";
 import { MapView } from "@/components/MapView";
@@ -189,10 +190,11 @@ export default function ParkingsPage() {
       <header className="flex items-center justify-between px-5 pt-6">
         <BrandMark compact />
         <Link
-          href="/recents"
-          className="rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
+          href="/suggest"
+          className="inline-flex items-center gap-1.5 rounded-[4px] border border-line bg-white px-3 py-1.5 text-sm font-medium"
         >
-          Recent
+          <PlusCircle size={16} />
+          Suggest a parking place
         </Link>
       </header>
       <div className="space-y-4 px-5 pt-4">
@@ -263,6 +265,7 @@ export default function ParkingsPage() {
                       <p className="mt-1 text-sm text-ink-soft">
                         {formatDistance(lot.distanceMeters)} · {formatMinutes(lot.walkingTimeSeconds)} walk
                       </p>
+                      <LotRating usefulCount={lot.usefulCount} reviewCount={lot.reviewCount} />
                     </button>
                     <div className="flex shrink-0 flex-col items-end gap-1">
                       <Link
@@ -291,15 +294,6 @@ export default function ParkingsPage() {
         </>
       )}
 
-      <div className="px-5 pt-6">
-        <Link
-          href="/suggest"
-          className="flex items-center justify-center gap-2 rounded-[4px] border border-line bg-white px-4 py-3 text-sm font-medium"
-        >
-          <PlusCircle size={18} />
-          Suggest a parking place
-        </Link>
-      </div>
     </UserShell>
   );
 }
