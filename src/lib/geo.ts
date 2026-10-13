@@ -45,6 +45,43 @@ export function samplePath(points: Coordinates[], everyMeters = 180): Coordinate
   return samples.slice(0, 36);
 }
 
+export function countSharpTurns(points: Coordinates[]) {
+  const cleaned = thinByDistance(points, 35);
+  let sharpTurnCount = 0;
+  let verySharpTurnCount = 0;
+  for (let i = 1; i < cleaned.length - 1; i += 1) {
+    const angle = turnAngleDegrees(cleaned[i - 1], cleaned[i], cleaned[i + 1]);
+    if (angle > 75) verySharpTurnCount += 1;
+    else if (angle > 45) sharpTurnCount += 1;
+  }
+  return { sharpTurnCount, verySharpTurnCount };
+}
+
+function thinByDistance(points: Coordinates[], minMeters: number) {
+  if (points.length < 3) return points;
+  const kept: Coordinates[] = [points[0]];
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const last = kept[kept.length - 1];
+    if (haversineMeters(last, points[i]) >= minMeters) kept.push(points[i]);
+  }
+  kept.push(points[points.length - 1]);
+  return kept;
+}
+
+function turnAngleDegrees(a: Coordinates, b: Coordinates, c: Coordinates) {
+  const delta = Math.abs(bearingDegrees(a, b) - bearingDegrees(b, c));
+  return delta > 180 ? 360 - delta : delta;
+}
+
+function bearingDegrees(from: Coordinates, to: Coordinates) {
+  const lat1 = toRad(from.lat);
+  const lat2 = toRad(to.lat);
+  const dLng = toRad(to.lng - from.lng);
+  const y = Math.sin(dLng) * Math.cos(lat2);
+  const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+  return ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+}
+
 export function decodePolyline(encoded: string): Coordinates[] {
   const points: Coordinates[] = [];
   let index = 0;

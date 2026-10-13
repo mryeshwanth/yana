@@ -1,4 +1,5 @@
 import { googleServerKey } from "../env";
+import { isCarParkingPlace } from "../car-parking";
 import type { ParkingCandidate, ParkingProvider } from "../types";
 
 export class GoogleParkingProvider implements ParkingProvider {
@@ -9,7 +10,7 @@ export class GoogleParkingProvider implements ParkingProvider {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": googleServerKey(),
         "X-Goog-FieldMask":
-          "places.id,places.displayName,places.formattedAddress,places.location,places.regularOpeningHours",
+          "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.regularOpeningHours",
       },
       body: JSON.stringify({
         includedTypes: ["parking"],
@@ -33,6 +34,7 @@ export class GoogleParkingProvider implements ParkingProvider {
         displayName?: { text?: string };
         formattedAddress?: string;
         location?: { latitude?: number; longitude?: number };
+        types?: string[];
         regularOpeningHours?: { weekdayDescriptions?: string[] };
       }>;
     };
@@ -40,9 +42,11 @@ export class GoogleParkingProvider implements ParkingProvider {
     const lots: ParkingCandidate[] = [];
     for (const place of data.places ?? []) {
       if (place.location?.latitude == null || place.location.longitude == null) continue;
+      const name = place.displayName?.text ?? "Parking";
+      if (!isCarParkingPlace(name, place.types ?? [])) continue;
       lots.push({
         id: `places:${place.id ?? `${place.location.latitude},${place.location.longitude}`}`,
-        name: place.displayName?.text ?? "Parking",
+        name,
         lat: place.location.latitude,
         lng: place.location.longitude,
         address: place.formattedAddress,
@@ -71,6 +75,7 @@ export class GoogleParkingProvider implements ParkingProvider {
       },
       body: JSON.stringify({
         textQuery: query,
+        includedType: "parking",
         languageCode: "en-IN",
         regionCode: "IN",
         maxResultCount: 10,
@@ -103,16 +108,14 @@ export class GoogleParkingProvider implements ParkingProvider {
       if (place.location?.latitude == null || place.location.longitude == null) continue;
       const name = place.displayName?.text ?? "Parking";
       const types = place.types ?? [];
-      const looksLikeParking =
-        /park/i.test(name) || types.some((type) => /parking/i.test(type));
+      if (!isCarParkingPlace(name, types, { requireParkingSignal: true })) continue;
       lots.push({
         id: `places:${place.id ?? `${place.location.latitude},${place.location.longitude}`}`,
-        name: looksLikeParking ? name : `${name} parking`,
+        name,
         lat: place.location.latitude,
         lng: place.location.longitude,
         address: place.formattedAddress,
         hoursText: place.regularOpeningHours?.weekdayDescriptions?.[0] ?? null,
-        notes: looksLikeParking ? null : "On-site at the destination",
         availabilityState: "unknown",
         source: "places",
         curated: false,

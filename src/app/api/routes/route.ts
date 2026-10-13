@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { CACHE_TTL, readCache, writeCache } from "@/lib/cache";
+import { fetchCorridorPois } from "@/lib/providers/corridor-pois";
+import { fetchWeatherAlong } from "@/lib/providers/open-meteo";
 import { getDriveRoutes, getWalkLeg } from "@/lib/providers/routing";
-import { roadClassProvider } from "@/lib/providers/osm-road-class";
+import { emptyMix, roadClassProvider } from "@/lib/providers/osm-road-class";
+import { buildInsights } from "@/lib/route-insights";
 import { annotateRoute, compareRoutes } from "@/lib/scoring";
 import type { ComparedRoute, WalkLeg } from "@/lib/types";
 
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
   }
 
   const cacheKey = [
-    "routes:v7",
+    "routes:v9",
     body.origin.lat.toFixed(3),
     body.origin.lng.toFixed(3),
     body.parking.lat.toFixed(3),
@@ -35,15 +38,29 @@ export async function POST(request: Request) {
   }
 
   try {
-    const [rawRoutes, walk] = await Promise.all([
+    const [rawRoutes, walk, weather, corridor] = await Promise.all([
       getDriveRoutes(body.origin, body.parking),
       getWalkLeg(body.parking, body.destination),
+      fetchWeatherAlong([body.origin, body.parking]).catch(() => ({
+        isDay: null,
+        rainMm: null,
+        visibilityM: null,
+        weatherRisk: null,
+        confidence: 0,
+        lowPointRain: false,
+      })),
+      fetchCorridorPois(body.origin, body.parking).catch(() => ({
+        hospitals: [],
+        police: [],
+        petrol: [],
+      })),
     ]);
 
     const annotated = await Promise.all(
       rawRoutes.map(async (route) => {
-        const mix = await roadClassProvider.annotate(route.coordinates);
-        return annotateRoute(route, mix);
+        const mix = await roadClassProvider.annotate(route.coordinates).catch(() => emptyMix());
+        const insights = buildInsights(route, mix, weather, corridor);
+        return annotateRoute(route, mix, insights);
       }),
     );
 

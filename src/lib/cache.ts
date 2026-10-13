@@ -32,4 +32,6 @@ export const CACHE_TTL = {
   nearby: 7 * DAY_MS,
   reverse: DAY_MS,
   routes: 10 * 60 * 1000,
+  weather: 20 * 60 * 1000,
+  pois: 12 * 60 * 60 * 1000,
 };

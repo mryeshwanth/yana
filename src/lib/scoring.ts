@@ -1,10 +1,12 @@
-import type { AnnotatedRoute, ComparedRoute, RawRoute, RoadMix, RouteTag } from "./types";
+import { insightChips, saferIndicatorScore, yanaScoreFor } from "./route-insights";
+import type { AnnotatedRoute, ComparedRoute, RawRoute, RoadMix, RouteInsights, RouteTag } from "./types";
 import { ROUTE_TAG_LABELS } from "./types";
 
 const FAMILY_MAX_EXTRA_MIN = 8;
+const SAFER_MAX_EXTRA_MIN = 10;
 
-export function annotateRoute(route: RawRoute, mix: RoadMix): AnnotatedRoute {
-  return { ...route, ...mix };
+export function annotateRoute(route: RawRoute, mix: RoadMix, insights: RouteInsights): AnnotatedRoute {
+  return { ...route, ...mix, insights };
 }
 
 export function compareRoutes(routes: AnnotatedRoute[]): ComparedRoute[] {
@@ -15,6 +17,7 @@ export function compareRoutes(routes: AnnotatedRoute[]): ComparedRoute[] {
   const mixKnown = unique.some((route) => route.majorShare > 0 || route.narrowShare > 0);
   const broader = mixKnown ? pickBroader(unique) : null;
   const family = mixKnown ? pickFamily(unique, fastest) : null;
+  const safer = pickSafer(unique, fastest);
 
   return unique
     .sort((a, b) => a.durationSeconds - b.durationSeconds)
@@ -23,6 +26,7 @@ export function compareRoutes(routes: AnnotatedRoute[]): ComparedRoute[] {
       if (route.id === fastest.id) tags.push("fastest");
       if (broader && route.id === broader.id) tags.push("broader_roads");
       if (family && route.id === family.id) tags.push("family_comfort");
+      if (safer && route.id === safer.id) tags.push("safer_indicators");
       const extraMinutes = Math.max(
         0,
         Math.round((route.durationSeconds - fastest.durationSeconds) / 60),
@@ -33,6 +37,8 @@ export function compareRoutes(routes: AnnotatedRoute[]): ComparedRoute[] {
         label: tags[0] ? ROUTE_TAG_LABELS[tags[0]] : `Route ${index + 1}`,
         profile: profileFor(route),
         explanation: explanationFor(route, tags, extraMinutes),
+        chips: insightChips(route.insights, route.majorShare, mixKnown),
+        yanaScore: yanaScoreFor(route, mixKnown),
       };
     });
 }
@@ -98,6 +104,24 @@ function pickFamily(routes: AnnotatedRoute[], fastest: AnnotatedRoute) {
   return fastest;
 }
 
+function pickSafer(routes: AnnotatedRoute[], fastest: AnnotatedRoute) {
+  const ranked = [...routes].sort((a, b) => {
+    const delta = (saferIndicatorScore(b) ?? -1) - (saferIndicatorScore(a) ?? -1);
+    if (Math.abs(delta) > 1) return delta;
+    return a.durationSeconds - b.durationSeconds;
+  });
+  const candidate = ranked[0];
+  if (!candidate) return null;
+  const candidateScore = saferIndicatorScore(candidate);
+  if (candidateScore == null) return null;
+  if (candidate.id === fastest.id) return fastest;
+  const fastestScore = saferIndicatorScore(fastest);
+  const extraMin = (candidate.durationSeconds - fastest.durationSeconds) / 60;
+  const clearlyBetter = fastestScore == null || candidateScore - fastestScore >= 8;
+  if (extraMin <= SAFER_MAX_EXTRA_MIN && clearlyBetter) return candidate;
+  return fastest;
+}
+
 function profileFor(route: AnnotatedRoute) {
   if (route.majorShare === 0 && route.narrowShare === 0) return "Road mix unavailable";
   if (route.majorShare >= 0.55) return "More major roads";
@@ -109,6 +133,10 @@ function profileFor(route: AnnotatedRoute) {
 function explanationFor(route: AnnotatedRoute, tags: RouteTag[], extraMinutes: number) {
   const mixUnknown = route.majorShare === 0 && route.narrowShare === 0;
   const majorPct = Math.round(route.majorShare * 100);
+
+  if (tags.includes("safer_indicators") && !tags.includes("fastest") && extraMinutes > 0) {
+    return `Stronger lighting and emergency-access indicators, adds ${extraMinutes} min. Not a safety guarantee.`;
+  }
 
   if (tags.includes("family_comfort") && !tags.includes("fastest") && extraMinutes > 0) {
     return `Fewer inner stretches, adds ${extraMinutes} min.`;
@@ -123,6 +151,11 @@ function explanationFor(route: AnnotatedRoute, tags: RouteTag[], extraMinutes: n
         : `a mixed road split (${majorPct}% major)`;
 
   if (tags.includes("fastest")) {
+    if (tags.includes("safer_indicators")) {
+      return mix
+        ? `Shortest drive, stronger lighting/emergency indicators, ${mix}. Not a safety guarantee.`
+        : "Shortest drive, stronger lighting and emergency-access indicators. Not a safety guarantee.";
+    }
     if (tags.includes("family_comfort") && mix) {
       return `Shortest drive, fewer inner stretches, ${mix}.`;
     }

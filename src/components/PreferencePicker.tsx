@@ -4,7 +4,7 @@ import { Circle, RadioButton } from "@phosphor-icons/react";
 import { PREFERENCE_COPY } from "@/lib/preferences";
 import type { RoutePreference } from "@/lib/types";
 
-const OPTIONS: RoutePreference[] = ["fastest", "broader_roads", "family_comfort"];
+const OPTIONS: RoutePreference[] = ["fastest", "broader_roads", "family_comfort", "safer_indicators"];
 
 export function PreferencePicker({
   value,

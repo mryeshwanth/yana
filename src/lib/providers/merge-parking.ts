@@ -1,4 +1,5 @@
 import { CACHE_TTL, readCache, writeCache } from "../cache";
+import { isCarParkingPlace } from "../car-parking";
 import { estimateWalk, haversineMeters } from "../geo";
 import { hasGoogleServer } from "../env";
 import { upsertGoogleParking } from "../persist";
@@ -17,7 +18,7 @@ export async function searchNearbyParking(
   radiusMeters = 1000,
   destName = "",
 ): Promise<Parking[]> {
-  const cacheKey = `nearby:v4:${destination.lat.toFixed(3)}:${destination.lng.toFixed(3)}:${radiusMeters}:${destName.toLowerCase().slice(0, 24)}`;
+  const cacheKey = `nearby:v6:${destination.lat.toFixed(3)}:${destination.lng.toFixed(3)}:${radiusMeters}:${destName.toLowerCase().slice(0, 24)}`;
   const cached = await readCache<Parking[]>(cacheKey);
   const catalog = await curated.searchNearby(destination.lat, destination.lng, radiusMeters + 200);
   const onsite = destName ? [onsiteLot(destination, destName)] : [];
@@ -60,6 +61,7 @@ function rankParking(
   candidates: ParkingCandidate[],
 ): Parking[] {
   return mergeCandidates(candidates)
+    .filter((candidate) => keepCarParking(candidate))
     .map((candidate) => {
       const distanceMeters = Math.round(
         haversineMeters(destination, { lat: candidate.lat, lng: candidate.lng }),
@@ -84,6 +86,13 @@ function rankParking(
     .slice(0, 20);
 }
 
+function keepCarParking(candidate: ParkingCandidate) {
+  if (candidate.curated || candidate.id.startsWith("onsite:") || candidate.id.startsWith("curated:")) {
+    return true;
+  }
+  return isCarParkingPlace(candidate.name);
+}
+
 function onsiteLot(destination: Coordinates, destName: string): ParkingCandidate {
   return {
     id: `onsite:${destination.lat.toFixed(5)},${destination.lng.toFixed(5)}`,
@@ -101,21 +110,26 @@ export function mergeCandidates(candidates: ParkingCandidate[]): ParkingCandidat
   const kept: ParkingCandidate[] = [];
 
   for (const candidate of [...candidates].sort((a, b) => Number(b.curated) - Number(a.curated))) {
-    const duplicate = kept.find(
-      (item) => haversineMeters(item, candidate) <= MERGE_METERS,
-    );
-    if (!duplicate) {
+    const sameId = kept.find((item) => item.id === candidate.id);
+    if (sameId) {
+      fillMissing(sameId, candidate);
+      continue;
+    }
+    const nearby = kept.find((item) => haversineMeters(item, candidate) <= MERGE_METERS);
+    if (!nearby) {
       kept.push(candidate);
       continue;
     }
-    if (duplicate.curated || duplicate.id.startsWith("onsite:")) {
-      duplicate.priceText = duplicate.priceText ?? candidate.priceText;
-      duplicate.hoursText = duplicate.hoursText ?? candidate.hoursText;
-      duplicate.address = duplicate.address ?? candidate.address;
-    }
+    fillMissing(nearby, candidate);
   }
 
   return kept;
+}
+
+function fillMissing(target: ParkingCandidate, source: ParkingCandidate) {
+  target.priceText = target.priceText ?? source.priceText;
+  target.hoursText = target.hoursText ?? source.hoursText;
+  target.address = target.address ?? source.address;
 }
 
 function normalizeAvailability(candidate: ParkingCandidate) {

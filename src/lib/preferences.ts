@@ -6,7 +6,12 @@ const ONBOARDED = "yana.onboarded";
 export function readPreference(): RoutePreference {
   if (typeof window === "undefined") return "broader_roads";
   const value = window.localStorage.getItem(KEY);
-  if (value === "fastest" || value === "broader_roads" || value === "family_comfort") {
+  if (
+    value === "fastest" ||
+    value === "broader_roads" ||
+    value === "family_comfort" ||
+    value === "safer_indicators"
+  ) {
     return value;
   }
   return "broader_roads";
@@ -42,5 +47,10 @@ export const PREFERENCE_COPY: Record<
     title: "Family Comfort",
     body: "Fewer inner stretches and no long detour. Can be the same path as Fastest or Broader roads.",
     for: "Suits trips with kids, elders, or luggage — less weaving, not a long extra drive.",
+  },
+  safer_indicators: {
+    title: "Safer indicators",
+    body: "Prefers stronger mapped lighting and closer hospital, police, or petrol POIs. Not a safety guarantee.",
+    for: "Suits night drives when you want more lighting and emergency-access indicators, not a claim the road is safe.",
   },
 };

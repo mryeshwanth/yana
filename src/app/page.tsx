@@ -169,7 +169,8 @@ export default function ParkingsPage() {
     writeTrip({ selectedParking: selected });
   }
 
-  const visibleParking = parking.filter((lot) => {
+  const visibleParking = parking.filter((lot, index, lots) => {
+    if (lots.findIndex((item) => item.id === lot.id) !== index) return false;
     if (filters.yanaVerified && !lot.curated) return false;
     if (filters.prices.length > 0) {
       const tag = priceTag(lot.priceText);

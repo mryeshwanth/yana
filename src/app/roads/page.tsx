@@ -5,6 +5,7 @@ import { Circle, RadioButton } from "@phosphor-icons/react";
 import { useEffect, useState } from "react";
 import { BrandMark } from "@/components/BrandMark";
 import { MapView } from "@/components/MapView";
+import { RouteScoreAccordion } from "@/components/RouteScoreAccordion";
 import { UserShell } from "@/components/UserShell";
 import { formatDistance, formatMinutes } from "@/lib/format";
 import { appleMapsDriveUrl, googleMapsDriveUrl } from "@/lib/maps-links";
@@ -175,33 +176,37 @@ export default function RoadsPage() {
                       ))}
                     </span>
                   )}
-                  {route.explanation && (
-                    <span className="mt-1.5 block text-sm text-ink-soft">{route.explanation}</span>
-                  )}
                 </span>
               </button>
-              {selectedCard && origin && (
-                <div className="mt-3 grid grid-cols-2 gap-2">
-                  <a
-                    className="rounded-[4px] border border-line bg-white px-3 py-2.5 text-center text-sm font-medium"
-                    href={googleMapsDriveUrl(origin, parking, destination, route.coordinates)}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => rememberMapsHandoff()}
-                  >
-                    Use Google Maps
-                  </a>
-                  <a
-                    className="rounded-[4px] border border-line bg-white px-3 py-2.5 text-center text-sm font-medium"
-                    href={appleMapsDriveUrl(origin, parking, destination, route.coordinates)}
-                    target="_blank"
-                    rel="noreferrer"
-                    onClick={() => rememberMapsHandoff()}
-                  >
-                    Use Apple Maps
-                  </a>
-                </div>
-              )}
+              <div className="pl-[34px]">
+                <RouteScoreAccordion
+                  score={route.yanaScore}
+                  explanation={route.explanation}
+                  chips={route.chips ?? []}
+                />
+                {selectedCard && origin && (
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <a
+                      className="rounded-[4px] border border-line bg-white px-3 py-2.5 text-center text-sm font-medium"
+                      href={googleMapsDriveUrl(origin, parking, destination, route.coordinates)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => rememberMapsHandoff()}
+                    >
+                      Use Google Maps
+                    </a>
+                    <a
+                      className="rounded-[4px] border border-line bg-white px-3 py-2.5 text-center text-sm font-medium"
+                      href={appleMapsDriveUrl(origin, parking, destination, route.coordinates)}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => rememberMapsHandoff()}
+                    >
+                      Use Apple Maps
+                    </a>
+                  </div>
+                )}
+              </div>
             </article>
           );
         })}

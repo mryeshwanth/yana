@@ -1,4 +1,5 @@
 import { postOverpass } from "./overpass";
+import { isCarParkingPlace } from "../car-parking";
 import type { ParkingCandidate, ParkingProvider } from "../types";
 
 type OverpassElement = {
@@ -13,6 +14,7 @@ type OverpassElement = {
     opening_hours?: string;
     fee?: string;
     charge?: string;
+    parking?: string;
   };
 };
 
@@ -21,8 +23,8 @@ export class OsmParkingProvider implements ParkingProvider {
     const query = `
       [out:json][timeout:20];
       (
-        node["amenity"="parking"](around:${Math.round(radiusMeters)},${lat},${lng});
-        way["amenity"="parking"](around:${Math.round(radiusMeters)},${lat},${lng});
+        node["amenity"="parking"]["parking"!="motorcycle"]["parking"!="bicycle"]["parking"!="bikes"](around:${Math.round(radiusMeters)},${lat},${lng});
+        way["amenity"="parking"]["parking"!="motorcycle"]["parking"!="bicycle"]["parking"!="bikes"](around:${Math.round(radiusMeters)},${lat},${lng});
       );
       out center tags;
     `;
@@ -33,7 +35,10 @@ export class OsmParkingProvider implements ParkingProvider {
       const pointLat = element.lat ?? element.center?.lat;
       const pointLng = element.lon ?? element.center?.lon;
       if (pointLat == null || pointLng == null) continue;
+      const parkingKind = element.tags?.parking;
+      if (parkingKind === "motorcycle" || parkingKind === "bicycle" || parkingKind === "bikes") continue;
       const name = element.tags?.name || element.tags?.operator || "Parking";
+      if (!isCarParkingPlace(name)) continue;
       const price =
         element.tags?.charge ||
         (element.tags?.fee === "yes" ? "Paid" : element.tags?.fee === "no" ? "Free" : null);

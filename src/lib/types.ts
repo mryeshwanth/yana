@@ -3,13 +3,14 @@ export type Coordinates = {
   lng: number;
 };
 
-export type RoutePreference = "fastest" | "broader_roads" | "family_comfort";
+export type RoutePreference = "fastest" | "broader_roads" | "family_comfort" | "safer_indicators";
 export type RouteTag = RoutePreference;
 
 export const ROUTE_TAG_LABELS: Record<RouteTag, string> = {
   fastest: "Fastest",
   broader_roads: "Broader roads",
   family_comfort: "Family comfort",
+  safer_indicators: "Safer indicators",
 };
 
 export type AvailabilityState = "live" | "estimated" | "unknown";
@@ -55,19 +56,62 @@ export type RawRoute = {
   distanceMeters: number;
 };
 
-export type AnnotatedRoute = RawRoute & {
+export type RoadMix = {
   majorShare: number;
   narrowShare: number;
   mediumShare: number;
   narrowSegmentCount: number;
   majorSegmentCount: number;
+  meanLanes: number | null;
+  meanWidthM: number | null;
+  litShare: number | null;
+  surfaceScore: number | null;
+  lanesConfidence: number;
+  widthConfidence: number;
+  litConfidence: number;
+  surfaceConfidence: number;
 };
+
+export type RouteInsights = {
+  meanLanes: number | null;
+  meanWidthM: number | null;
+  litShare: number | null;
+  surfaceScore: number | null;
+  lanesConfidence: number;
+  widthConfidence: number;
+  litConfidence: number;
+  surfaceConfidence: number;
+  sharpTurnCount: number;
+  verySharpTurnCount: number;
+  isDay: boolean | null;
+  rainMm: number | null;
+  visibilityM: number | null;
+  weatherRisk: number | null;
+  weatherConfidence: number;
+  lowPointRain: boolean;
+  nearestHospitalM: number | null;
+  nearestPoliceM: number | null;
+  nearestPetrolM: number | null;
+};
+
+export type RouteChip = {
+  id: string;
+  label: string;
+  detail: string;
+};
+
+export type AnnotatedRoute = RawRoute &
+  RoadMix & {
+    insights: RouteInsights;
+  };
 
 export type ComparedRoute = AnnotatedRoute & {
   tags: RouteTag[];
   label: string;
   profile: string;
   explanation: string;
+  chips: RouteChip[];
+  yanaScore: number | null;
 };
 
 export type WalkLeg = {
@@ -99,14 +143,6 @@ export type ParkingCandidate = {
   curated: boolean;
 };
 
-export type RoadMix = {
-  majorShare: number;
-  narrowShare: number;
-  mediumShare: number;
-  narrowSegmentCount: number;
-  majorSegmentCount: number;
-};
-
 export interface RoadClassProvider {
   annotate(coordinates: Coordinates[]): Promise<RoadMix>;
 }
@@ -114,4 +150,4 @@ export interface RoadClassProvider {
 export interface GeocodingProvider {
   autocomplete(query: string, proximity?: Coordinates): Promise<PlaceSuggestion[]>;
   details(id: string): Promise<PlaceDetails | null>;
-}
+};
