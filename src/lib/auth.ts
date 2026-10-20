@@ -7,7 +7,7 @@ const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function verifyAdminPassword(password: string) {
   const expected = Buffer.from(adminPassword());
-  const received = Buffer.from(password);
+  const received = Buffer.from(password.trim());
   if (expected.length !== received.length) return false;
   return timingSafeEqual(expected, received);
 }

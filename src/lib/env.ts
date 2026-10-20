@@ -1,13 +1,26 @@
+function readEnv(name: string) {
+  const raw = process.env[name];
+  if (!raw) return "";
+  let value = raw.trim();
+  if (
+    (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
+    (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
+  ) {
+    value = value.slice(1, -1).trim();
+  }
+  return value;
+}
+
 export function googleServerKey() {
-  return process.env.GOOGLE_MAPS_API_KEY?.trim() || "";
+  return readEnv("GOOGLE_MAPS_API_KEY");
 }
 
 export function googleBrowserKey() {
-  return process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() || "";
+  return readEnv("NEXT_PUBLIC_GOOGLE_MAPS_API_KEY");
 }
 
 export function overpassUrl() {
-  return process.env.OVERPASS_URL?.trim() || "https://overpass.osm.ch/api/interpreter";
+  return readEnv("OVERPASS_URL") || "https://overpass.osm.ch/api/interpreter";
 }
 
 export function overpassFallbacks() {
@@ -20,10 +33,10 @@ export function overpassFallbacks() {
 }
 
 export function adminPassword() {
-  const value = process.env.ADMIN_PASSWORD?.trim();
+  const value = readEnv("ADMIN_PASSWORD");
   if (process.env.NODE_ENV === "production") {
     if (!value || value === "yana-admin") {
-      throw new Error("Set a strong ADMIN_PASSWORD in production");
+      throw new Error("Set a strong ADMIN_PASSWORD in Railway (not yana-admin).");
     }
     return value;
   }
@@ -31,10 +44,10 @@ export function adminPassword() {
 }
 
 export function adminSessionSecret() {
-  const value = process.env.ADMIN_SESSION_SECRET?.trim();
+  const value = readEnv("ADMIN_SESSION_SECRET");
   if (process.env.NODE_ENV === "production") {
     if (!value || value === "yana-local-session-secret" || value === "change-me-in-production") {
-      throw new Error("Set ADMIN_SESSION_SECRET in production");
+      throw new Error("Set ADMIN_SESSION_SECRET in Railway to a long random string.");
     }
     return value;
   }

@@ -17,8 +17,9 @@ export default function AgentLoginPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ password }),
     });
+    const data = (await response.json().catch(() => ({}))) as { error?: string };
     if (!response.ok) {
-      setError("Wrong password.");
+      setError(data.error || "Could not sign in.");
       return;
     }
     router.push("/agent");
