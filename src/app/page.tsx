@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { CaretRight, Funnel, PlusCircle } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
 import { LotRating } from "@/components/LotRating";
 import { LotTags } from "@/components/LotTags";
@@ -32,6 +32,7 @@ export default function ParkingsPage() {
   const [loadingParking, setLoadingParking] = useState(false);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<ParkingFilters>(DEFAULT_FILTERS);
+  const skipOriginReverse = useRef(false);
 
   useEffect(() => {
     setFilters(readFilters());
@@ -50,6 +51,10 @@ export default function ParkingsPage() {
   useEffect(() => {
     if (!origin) {
       setOriginLabel("");
+      return;
+    }
+    if (skipOriginReverse.current) {
+      skipOriginReverse.current = false;
       return;
     }
     let cancelled = false;
@@ -120,8 +125,7 @@ export default function ParkingsPage() {
     setLocationNote("");
   }
 
-  async function go(suggestion?: PlaceSuggestion, query?: string) {
-    setError("");
+  async function resolvePlace(suggestion?: PlaceSuggestion, query?: string, emptyMessage?: string) {
     let place = suggestion?.location
       ? { name: suggestion.label, location: suggestion.location, id: suggestion.id }
       : null;
@@ -138,17 +142,33 @@ export default function ParkingsPage() {
       const data = (await response.json()) as { suggestions?: PlaceSuggestion[] };
       const first = data.suggestions?.[0];
       if (!first) {
-        setError("No matching place. Try a mall or area name.");
-        return;
+        setError(emptyMessage ?? "No matching place. Try a mall or area name.");
+        return null;
       }
       place = first.location
         ? { name: first.label, location: first.location, id: first.id }
         : await fetchDetails(first.id, query);
     }
-    if (!place) {
-      setError("Could not open that place.");
-      return;
+    if (!place && (suggestion || query)) {
+      setError(emptyMessage ?? "Could not open that place.");
     }
+    return place;
+  }
+
+  async function setStart(suggestion?: PlaceSuggestion, query?: string) {
+    setError("");
+    const place = await resolvePlace(suggestion, query, "No matching start. Try an area or landmark.");
+    if (!place) return;
+    skipOriginReverse.current = true;
+    setOrigin(place.location);
+    setOriginLabel(place.name);
+    writeTrip({ origin: place.location });
+  }
+
+  async function go(suggestion?: PlaceSuggestion, query?: string) {
+    setError("");
+    const place = await resolvePlace(suggestion, query);
+    if (!place) return;
     const start = origin ?? BANGALORE_CENTER;
     setDestination(place.location);
     setDestName(place.name);
@@ -205,6 +225,7 @@ export default function ParkingsPage() {
           locationNote={locationNote}
           locating={locating}
           onLocate={locate}
+          onSelectOrigin={setStart}
           onSelectPlace={go}
         />
         {error && <p className="text-sm text-accent-dark">{error}</p>}
