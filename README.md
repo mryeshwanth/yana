@@ -1,6 +1,10 @@
 # Yana
 
-Mobile PWA for parking-first trip planning in Indian metros. Drivers pick a lot, then compare Fastest / Broader Roads / Family Comfort / Safer indicators. A Yana score (0–100) summarises road mix, lighting, and nearby services — it is not a safety guarantee. Turn-by-turn stays in Google or Apple Maps.
+Yana is a web-only parking-first trip planner for Indian metros (Bangalore first). You search a destination, pick a car park, then compare a few real drive options before you leave.
+
+It is a mobile PWA. No accounts. No in-app turn-by-turn. Navigation opens in Google Maps or Apple Maps as origin → parking → destination.
+
+Route cards are tagged **Fastest**, **Broader roads**, **Family comfort**, and **Safer indicators**. Each option has a Yana score (0–100) from road mix, lighting, surface, turns, weather, and nearby hospital / police / petrol. That score is a comfort composite, not a claim the road is safe. Parking never fakes live availability.
 
 This repo contains **no live secrets**. Copy [`.env.example`](.env.example) to a local `.env` (gitignored). Never commit `.env` or paste real keys into issues.
 
