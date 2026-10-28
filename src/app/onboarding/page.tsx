@@ -26,13 +26,15 @@ export default function OnboardingPage() {
       <div className="mt-8">
         <PreferencePicker value={value} onChange={setValue} />
       </div>
-      <button
-        type="button"
-        onClick={continueOnboarding}
-        className="mt-auto rounded-[4px] bg-accent px-5 py-3.5 text-sm font-semibold text-white"
-      >
-        Continue
-      </button>
+      <div className="mt-auto pt-6">
+        <button
+          type="button"
+          onClick={continueOnboarding}
+          className="w-full rounded-[4px] bg-accent px-5 py-3.5 text-sm font-semibold text-white"
+        >
+          Continue
+        </button>
+      </div>
     </main>
   );
 }
