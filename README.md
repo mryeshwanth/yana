@@ -1,8 +1,10 @@
 # Yana
 
-Mobile PWA for parking-first trip planning in Indian metros. Drivers pick a lot, then compare Fastest / Broader Roads / Family Comfort. Turn-by-turn stays in Google or Apple Maps.
+Mobile PWA for parking-first trip planning in Indian metros. Drivers pick a lot, then compare Fastest / Broader Roads / Family Comfort / Safer indicators. A Yana score (0–100) summarises road mix, lighting, and nearby services — it is not a safety guarantee. Turn-by-turn stays in Google or Apple Maps.
 
-## Google Cloud setup (required to share with others)
+This repo contains **no live secrets**. Copy [`.env.example`](.env.example) to a local `.env` (gitignored). Never commit `.env` or paste real keys into issues.
+
+## Google Cloud setup
 
 Billing must be on. Enable only these APIs:
 
@@ -10,47 +12,66 @@ Billing must be on. Enable only these APIs:
 2. **Routes API**
 3. **Maps JavaScript API**
 
-Create two keys in the same project:
+Create **two keys** in the same Google Cloud project. Do not use one key for both.
 
-| Env var | Used for | API restrictions | Application restriction |
-|---|---|---|---|
-| `GOOGLE_MAPS_API_KEY` | Autocomplete, place details, nearby parking, routes | Places API (New), Routes API | IP (or none while prototyping) |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | In-app map | Maps JavaScript API only | HTTP referrers: `http://localhost:3000/*` plus your public host |
+| Env var | Name it in Console | Used for | API restrictions | Application restriction |
+|---|---|---|---|---|
+| `GOOGLE_MAPS_API_KEY` | Yana server | Autocomplete, place details, nearby parking, routes | Places API (New), Routes API | IP if you have one; otherwise none while prototyping |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Yana maps | In-app map only | Maps JavaScript API only | HTTP referrers: `http://localhost:3000/*` and your public host (`https://<your-app>.up.railway.app/*`) |
 
-Copy [`.env.example`](.env.example) to `.env` and paste both keys. Restart `npm run dev`.
+The maps key is a **browser** key. It will appear in client JS. Restrict it by referrer or anyone can bill your Google project.
+
+Copy `.env.example` to `.env`, paste both keys, restart `npm run dev`.
 
 Without keys, search falls back to Nominatim (weak for Indian place names) and the seeded Bangalore catalog.
 
-Do not enable Geocoding API, legacy Directions, Parkopedia, or INRIX for this prototype.
-
 ## Local run
 
+Needs Node 20+ and PostgreSQL.
+
 ```bash
+cp .env.example .env
+# paste keys and DATABASE_URL into .env
 npm install
 npx prisma db push
 npm run db:seed
 npm run dev
 ```
 
-Open http://localhost:3000. Agent catalog (hidden from users): http://localhost:3000/agent — password `yana-admin` unless you change `ADMIN_PASSWORD`.
+Open http://localhost:3000.
+
+Operator tools (catalog, suggestions, reviews) are at http://localhost:3000/agent. Local default password is `yana-admin` via `ADMIN_PASSWORD`. Change it if you expose that machine. Production **must not** use this default.
 
 ## Deploy on Railway
 
 1. New project → Deploy from this GitHub repo.
 2. Add a **PostgreSQL** plugin so `DATABASE_URL` is injected.
-3. Set these variables on the web service (build **and** runtime):
+3. Set these variables on the **web service** (available at **build and runtime**):
 
 | Variable | Notes |
 |---|---|
 | `DATABASE_URL` | From the Postgres plugin |
 | `GOOGLE_MAPS_API_KEY` | Server key (Places New + Routes) |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Browser key (Maps JavaScript). Must exist at **build** time |
-| `ADMIN_PASSWORD` | Required in production. Do not use `yana-admin` |
-| `ADMIN_SESSION_SECRET` | Long random string |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Maps JavaScript key. Required at **build** time — redeploy after changing it |
+| `ADMIN_PASSWORD` | Strong password. **Not** `yana-admin` |
+| `ADMIN_SESSION_SECRET` | Long random string. **Not** `change-me-in-production` |
 
-4. Restrict the browser key HTTP referrer to `https://<your-app>.up.railway.app/*` and your custom domain.
+4. Restrict the maps key HTTP referrer to your Railway URL and any custom domain.
 5. First deploy runs `prisma migrate deploy` then `next start`. Health check: `/api/health`.
 6. Optional catalog seed: `railway run npx tsx prisma/seed.ts`
+
+If login at `/agent/login` fails in production, the page shows the server error. Usually `ADMIN_PASSWORD` or `ADMIN_SESSION_SECRET` is still a local default.
+
+## Secrets
+
+| Keep private | Why |
+|---|---|
+| `.env` | Local keys and database URL |
+| `GOOGLE_MAPS_API_KEY` | Server key; restrict APIs |
+| `DATABASE_URL` | Postgres |
+| `ADMIN_PASSWORD` / `ADMIN_SESSION_SECRET` | Operator login |
+
+Rotate Google keys in Cloud Console, then update Railway and local `.env`. Delete the old keys in Console.
 
 ## PWA
 
