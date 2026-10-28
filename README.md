@@ -1,6 +1,6 @@
 # Yana
 
-Yana is a web-only parking-first trip planner for Indian metros (Bangalore first). You search a destination, pick a car park, then compare a few real drive options before you leave.
+Yana is a web-only parking-first trip planner for metro cities. You search a destination, pick a car park, then compare a few real drive options before you leave.
 
 It is a mobile PWA. No accounts. No in-app turn-by-turn. Navigation opens in Google Maps or Apple Maps as origin → parking → destination.
 
