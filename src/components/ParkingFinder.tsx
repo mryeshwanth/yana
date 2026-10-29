@@ -123,6 +123,9 @@ export function ParkingFinder() {
       <header className="flex items-center justify-between gap-4">
         <BrandMark />
         <div className="flex items-center gap-4 text-sm">
+          <Link href="/agent/suggestions" className="text-ink-soft underline-offset-4 hover:underline">
+            Suggestions
+          </Link>
           <Link href="/agent/catalog" className="text-ink-soft underline-offset-4 hover:underline">
             Catalog
           </Link>

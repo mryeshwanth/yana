@@ -28,6 +28,9 @@ export default async function AgentReviewsPage() {
           <Link href="/agent" className="text-ink-soft underline-offset-4 hover:underline">
             Finder
           </Link>
+          <Link href="/agent/suggestions" className="text-ink-soft underline-offset-4 hover:underline">
+            Suggestions
+          </Link>
           <Link href="/agent/catalog" className="text-ink-soft underline-offset-4 hover:underline">
             Catalog
           </Link>
