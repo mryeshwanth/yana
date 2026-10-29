@@ -72,7 +72,7 @@ export default function SuggestPage() {
       setStatus("Could not send that suggestion. Check the name and pin.");
       return;
     }
-    setStatus("Sent. Yana will review it before it appears in search.");
+    setStatus("Sent. yana will review it before it appears in search.");
     setForm(EMPTY_LOT_FORM);
   }
 

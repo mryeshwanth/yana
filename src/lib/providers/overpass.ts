@@ -8,7 +8,7 @@ export async function postOverpass<T>(query: string): Promise<T[]> {
         method: "POST",
         headers: {
           "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
-          "User-Agent": "Yana/0.1 (mobility web mvp)",
+          "User-Agent": "yana/0.1 (mobility web mvp)",
         },
         body: `data=${encodeURIComponent(query)}`,
         signal: AbortSignal.timeout(15000),

@@ -2,7 +2,7 @@ import type { Coordinates, GeocodingProvider, PlaceDetails, PlaceSuggestion } fr
 
 const HEADERS = {
   Accept: "application/json",
-  "User-Agent": "Yana/0.1 (mobility web mvp; https://localhost)",
+  "User-Agent": "yana/0.1 (mobility web mvp; https://localhost)",
 };
 
 type NominatimHit = {

@@ -23,7 +23,7 @@ export function LotTags({
       {verified && (
         <Tag>
           <SealCheck size={12} weight="fill" />
-          Yana verified
+          yana verified
         </Tag>
       )}
     </div>

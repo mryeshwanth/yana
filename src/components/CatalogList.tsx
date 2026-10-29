@@ -40,7 +40,7 @@ export function CatalogList({ lots }: { lots: Lot[] }) {
     <main className="mx-auto min-h-dvh w-full max-w-5xl px-5 py-8">
       <AgentNav current="catalog" />
       <h1 className="mt-10 text-3xl font-semibold">Catalog</h1>
-      <p className="mt-3 text-ink-soft">Lots already in Yana. Hide one to keep it out of search.</p>
+      <p className="mt-3 text-ink-soft">Lots already in yana. Hide one to keep it out of search.</p>
       <div className="mt-8 space-y-3 pb-12">
         {lots.length === 0 && <p className="text-sm text-ink-soft">No lots in the catalog yet.</p>}
         {lots.map((lot) => (

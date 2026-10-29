@@ -130,7 +130,7 @@ export default function FiltersPage() {
               <Circle size={20} className="text-ink-soft" />
             )}
             <span>
-              <span className="block font-medium">Yana verified only</span>
+              <span className="block font-medium">yana verified only</span>
               <span className="mt-0.5 block text-sm text-ink-soft">Lots added by an agent</span>
             </span>
           </button>

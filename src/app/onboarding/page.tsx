@@ -21,7 +21,7 @@ export default function OnboardingPage() {
       <p className="text-sm font-medium uppercase tracking-[0.18em] text-accent">Before you drive</p>
       <h1 className="mt-3 text-3xl font-semibold leading-tight">How do you want to get there?</h1>
       <p className="mt-3 text-ink-soft">
-        Yana will not call a route safe. You can change this later in Profile.
+        yana will not call a route safe. You can change this later in Profile.
       </p>
       <div className="mt-8">
         <PreferencePicker value={value} onChange={setValue} />

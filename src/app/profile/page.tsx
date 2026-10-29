@@ -28,7 +28,7 @@ export default function ProfilePage() {
       <section className="px-5 pt-8">
         <h1 className="text-3xl font-semibold">Settings</h1>
         <p className="mt-3 text-ink-soft">
-          Yana pre-selects the matching tagged route. It is not a safety claim.
+          yana pre-selects the matching tagged route. It is not a safety claim.
         </p>
         <div className="mt-6">
           <PreferencePicker value={value} onChange={choose} />
