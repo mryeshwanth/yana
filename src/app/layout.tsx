@@ -9,13 +9,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Yana",
+  title: "yana",
   description: "Park first, then choose a broader road.",
-  applicationName: "Yana",
+  applicationName: "yana",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "Yana",
+    title: "yana",
     statusBarStyle: "default",
   },
   icons: {

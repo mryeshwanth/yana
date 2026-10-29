@@ -1,6 +1,6 @@
 {
-  "name": "Yana",
-  "short_name": "Yana",
+  "name": "yana",
+  "short_name": "yana",
   "description": "Park first, then choose a broader road.",
   "start_url": "/",
   "display": "standalone",

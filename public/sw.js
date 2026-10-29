@@ -1,4 +1,4 @@
-const CACHE = "yana-shell-v3";
+const CACHE = "yana-shell-v4";
 const SHELL = ["/", "/roads", "/profile", "/manifest.webmanifest", "/icon-192.png"];
 
 self.addEventListener("install", (event) => {
