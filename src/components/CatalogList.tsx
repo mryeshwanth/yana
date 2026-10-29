@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { BrandMark } from "@/components/BrandMark";
+import { AgentNav } from "@/components/AgentNav";
 import { lotKindLabel } from "@/lib/lot-kinds";
 import type { AvailabilitySource, AvailabilityState } from "@/lib/types";
 
@@ -37,30 +36,9 @@ export function CatalogList({ lots }: { lots: Lot[] }) {
     router.refresh();
   }
 
-  async function logout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/agent/login");
-  }
-
   return (
     <main className="mx-auto min-h-dvh w-full max-w-5xl px-5 py-8">
-      <header className="flex items-center justify-between gap-4">
-        <BrandMark />
-        <div className="flex items-center gap-4 text-sm">
-          <Link href="/agent" className="text-ink-soft underline-offset-4 hover:underline">
-            Finder
-          </Link>
-          <Link href="/agent/suggestions" className="text-ink-soft underline-offset-4 hover:underline">
-            Suggestions
-          </Link>
-          <Link href="/agent/reviews" className="text-ink-soft underline-offset-4 hover:underline">
-            Reviews
-          </Link>
-          <button type="button" onClick={logout} className="text-ink-soft underline-offset-4 hover:underline">
-            Sign out
-          </button>
-        </div>
-      </header>
+      <AgentNav current="catalog" />
       <h1 className="mt-10 text-3xl font-semibold">Catalog</h1>
       <p className="mt-3 text-ink-soft">Lots already in Yana. Hide one to keep it out of search.</p>
       <div className="mt-8 space-y-3 pb-12">

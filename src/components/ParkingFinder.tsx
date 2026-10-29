@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { Crosshair } from "@phosphor-icons/react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { BrandMark } from "@/components/BrandMark";
+import { AgentNav } from "@/components/AgentNav";
 import { LotDetailsFields } from "@/components/LotDetailsFields";
 import { MapView } from "@/components/MapView";
 import { BANGALORE_CENTER } from "@/lib/constants";
@@ -94,11 +93,6 @@ export function ParkingFinder() {
     router.refresh();
   }
 
-  async function logout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/agent/login");
-  }
-
   return (
     <main className="mx-auto min-h-dvh w-full max-w-5xl px-5 py-8">
       {toast && (
@@ -120,23 +114,7 @@ export function ParkingFinder() {
           </div>
         </div>
       )}
-      <header className="flex items-center justify-between gap-4">
-        <BrandMark />
-        <div className="flex items-center gap-4 text-sm">
-          <Link href="/agent/suggestions" className="text-ink-soft underline-offset-4 hover:underline">
-            Suggestions
-          </Link>
-          <Link href="/agent/catalog" className="text-ink-soft underline-offset-4 hover:underline">
-            Catalog
-          </Link>
-          <Link href="/agent/reviews" className="text-ink-soft underline-offset-4 hover:underline">
-            Reviews
-          </Link>
-          <button type="button" onClick={logout} className="text-ink-soft underline-offset-4 hover:underline">
-            Sign out
-          </button>
-        </div>
-      </header>
+      <AgentNav current="finder" />
       <h1 className="mt-10 text-3xl font-semibold">Parking Finder</h1>
 
       <section className="mt-8 grid items-stretch gap-6 lg:grid-cols-2">

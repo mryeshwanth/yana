@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BrandMark } from "@/components/BrandMark";
+import { AgentNav } from "@/components/AgentNav";
+import { SegmentedControl } from "@/components/SegmentedControl";
 import { lotKindLabel } from "@/lib/lot-kinds";
 
 type Suggestion = {
@@ -19,8 +20,18 @@ type Suggestion = {
   createdAt: string;
 };
 
+type Tab = "all" | "pending" | "approved";
+
 export function SuggestionList({ suggestions }: { suggestions: Suggestion[] }) {
   const router = useRouter();
+  const [tab, setTab] = useState<Tab>("all");
+  const pendingCount = suggestions.filter((item) => item.status === "pending").length;
+  const approvedCount = suggestions.filter((item) => item.status === "approved").length;
+  const visible = suggestions.filter((item) => {
+    if (tab === "pending") return item.status === "pending";
+    if (tab === "approved") return item.status === "approved";
+    return true;
+  });
 
   async function act(id: string, action: "approve" | "reject") {
     await fetch(`/api/admin/suggestions/${id}`, {
@@ -31,41 +42,29 @@ export function SuggestionList({ suggestions }: { suggestions: Suggestion[] }) {
     router.refresh();
   }
 
-  async function logout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    router.push("/agent/login");
-  }
-
   return (
     <main className="mx-auto min-h-dvh w-full max-w-5xl px-5 py-8">
-      <header className="flex items-center justify-between gap-4">
-        <BrandMark />
-        <div className="flex flex-wrap items-center justify-end gap-4 text-sm">
-          <Link href="/agent" className="text-ink-soft underline-offset-4 hover:underline">
-            Finder
-          </Link>
-          <Link href="/agent/catalog" className="text-ink-soft underline-offset-4 hover:underline">
-            Catalog
-          </Link>
-          <Link href="/agent/reviews" className="text-ink-soft underline-offset-4 hover:underline">
-            Reviews
-          </Link>
-          <button type="button" onClick={logout} className="text-ink-soft underline-offset-4 hover:underline">
-            Sign out
-          </button>
-        </div>
-      </header>
+      <AgentNav current="suggestions" />
       <h1 className="mt-10 text-3xl font-semibold">Suggestions</h1>
       <p className="mt-3 text-ink-soft">
         Lots drivers sent from Suggest parking. Approve to add them to the catalog.
       </p>
-      <div className="mt-8 space-y-3 pb-12">
-        {suggestions.length === 0 && (
+      <SegmentedControl
+        value={tab}
+        onChange={setTab}
+        options={[
+          { id: "all", label: "All", count: suggestions.length },
+          { id: "pending", label: "Pending", count: pendingCount },
+          { id: "approved", label: "Approved", count: approvedCount },
+        ]}
+      />
+      <div className="mt-6 space-y-3 pb-12">
+        {visible.length === 0 && (
           <p className="rounded-[4px] border border-line bg-white px-4 py-4 text-sm text-ink-soft">
-            No suggestions yet.
+            No suggestions in this list.
           </p>
         )}
-        {suggestions.map((item) => (
+        {visible.map((item) => (
           <article key={item.id} className="rounded-[4px] border border-line bg-white p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
